@@ -30,6 +30,10 @@
             --element-Si: #9E9E9E; /* Medium Gray */
             --element-F: #90CAF9; /* Light Blue */
             --element-Li: #FFCCBC; /* Light Peach */
+            
+            /* Special Element Colors */
+            --special-bomb: #A020F0; /* Purple */
+            --special-wildcard: #FFD700; /* Gold */
         }
 
         body {
@@ -129,6 +133,16 @@
 
         button#newGameBtn:hover {
             background-color: #40C2A7;
+            transform: translateY(-2px);
+        }
+        
+        button#rulesBtn {
+            background-color: #3498DB;
+            color: var(--text-color);
+        }
+        
+        button#rulesBtn:hover {
+            background-color: #2980B9;
             transform: translateY(-2px);
         }
 
@@ -245,7 +259,49 @@
             display: none;
             z-index: 1000;
         }
+
+        .rules-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(44, 62, 80, 0.95);
+            color: var(--text-color);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+            max-width: 80%;
+            text-align: center;
+            display: none;
+            z-index: 1001;
+            border: 2px solid var(--primary-color);
+        }
+
+        .rules-box h2 {
+            margin-top: 0;
+            color: var(--secondary-color);
+            font-size: 2em;
+        }
         
+        .rules-box p {
+            font-size: 1.2em;
+            line-height: 1.6;
+        }
+        
+        .rules-box .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 2em;
+            cursor: pointer;
+            color: var(--primary-color);
+            transition: color 0.2s;
+        }
+        
+        .rules-box .close-btn:hover {
+            color: var(--secondary-color);
+        }
+
         /* Merging Animation */
         @keyframes merge-pulse {
             0% { transform: scale(1); opacity: 1; }
@@ -268,6 +324,8 @@
         .element-Si { background-color: var(--element-Si); color: #fff; }
         .element-F { background-color: var(--element-F); color: #000; }
         .element-Li { background-color: var(--element-Li); color: #000; }
+        .element-bomb { background-color: var(--special-bomb); color: #fff; }
+        .element-wildcard { background-color: var(--special-wildcard); color: #000; }
         
         /* Highlight animation for potential merges */
         @keyframes glow {
@@ -318,12 +376,22 @@
         
         <div class="controls">
             <button id="newGameBtn">New Game</button>
+            <button id="rulesBtn">Rules</button>
             <button id="soundBtn"><i class="fas fa-volume-up"></i></button>
         </div>
     </div>
 </div>
 
 <div id="messageBox" class="message-box"></div>
+<div id="rulesBox" class="rules-box">
+    <span class="close-btn">&times;</span>
+    <h2>How to Play</h2>
+    <p>Drop elements into a column by clicking on it. When a connected group of elements matches a molecule's formula, they will merge and give you points.</p>
+    <p>Watch out for **special elements** that can change the game:</p>
+    <p>💥 A **Bomb** will destroy all elements in the column it lands on.</p>
+    <p>❓ A **Wildcard** will turn into a random element to help you complete a molecule.</p>
+    <p>The game is over when a column fills up to the top.</p>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -336,8 +404,11 @@
         const scoreDisplay = document.getElementById('scoreDisplay');
         const moleculeList = document.getElementById('moleculeList');
         const newGameBtn = document.getElementById('newGameBtn');
+        const rulesBtn = document.getElementById('rulesBtn');
         const soundBtn = document.getElementById('soundBtn');
         const messageBox = document.getElementById('messageBox');
+        const rulesBox = document.getElementById('rulesBox');
+        const rulesCloseBtn = rulesBox.querySelector('.close-btn');
         
         const GRID_ROWS = 5;
         const GRID_COLS = 5;
@@ -397,15 +468,7 @@
             { name: 'Hydrogen Peroxide', formula: 'H₂O₂', elements: { 'H': 2, 'O': 2 }, points: 100 }
         ];
 
-        // Get a list of all unique element symbols from the molecules array
-        const availableSymbols = new Set();
-        molecules.forEach(mol => {
-            Object.keys(mol.elements).forEach(symbol => {
-                availableSymbols.add(symbol);
-            });
-        });
-
-        const dropElements = [
+        const baseElements = [
             { symbol: 'H', name: 'Hydrogen', color: 'var(--element-H)', weight: 4 },
             { symbol: 'O', name: 'Oxygen', color: 'var(--element-O)', weight: 3 },
             { symbol: 'C', name: 'Carbon', color: 'var(--element-C)', weight: 2 },
@@ -421,7 +484,24 @@
             { symbol: 'Si', name: 'Silicon', color: 'var(--element-Si)', weight: 1 },
             { symbol: 'Li', name: 'Lithium', color: 'var(--element-Li)', weight: 1 },
             { symbol: 'F', name: 'Fluorine', color: 'var(--element-F)', weight: 1 },
-        ].filter(el => availableSymbols.has(el.symbol));
+        ];
+
+        // Get a list of all unique element symbols from the molecules array
+        const availableSymbols = new Set();
+        molecules.forEach(mol => {
+            Object.keys(mol.elements).forEach(symbol => {
+                availableSymbols.add(symbol);
+            });
+        });
+
+        // Filter the drop elements to only include those in the molecule list
+        const dropElements = baseElements.filter(el => availableSymbols.has(el.symbol));
+
+        // Add the special elements to the element pool
+        const specialElements = [
+            { symbol: '💣', name: 'Bomb', color: 'var(--special-bomb)', isSpecial: true },
+            { symbol: '?', name: 'Wildcard', color: 'var(--special-wildcard)', isSpecial: true },
+        ];
 
         let moleculeCounts = {};
         molecules.forEach(mol => {
@@ -498,9 +578,8 @@
                 tallyElement.textContent = moleculeCounts[formula];
             }
         }
-
-        function generateNextElement() {
-            // Weighted random selection from the filtered list of elements
+        
+        function getRandomRegularElement() {
             const totalWeight = dropElements.reduce((sum, el) => sum + el.weight, 0);
             let randomNum = Math.random() * totalWeight;
 
@@ -512,8 +591,21 @@
                     break;
                 }
             }
-            
-            nextElement = { ...selectedElement, y: 0 };
+            return selectedElement;
+        }
+
+        function generateNextElement() {
+            const randomNumber = Math.random();
+            const specialRate = 1 / 20;
+
+            if (randomNumber < specialRate) {
+                nextElement = specialElements[0]; // Bomb
+            } else if (randomNumber < specialRate * 2) {
+                nextElement = specialElements[1]; // Wildcard
+            } else {
+                nextElement = getRandomRegularElement();
+            }
+
             if (!activeElement) {
                 activeElement = nextElement;
                 generateNextElement();
@@ -566,7 +658,7 @@
                 const currentOpacity = 1 - progress;
 
                 gameCtx.save();
-                gameCtx.globalAlpha = currentOpacity;
+                ctx.globalAlpha = currentOpacity;
                 drawElement(gameCtx, anim.symbol, anim.color, currentX, currentY, CELL_SIZE);
                 gameCtx.restore();
 
@@ -656,12 +748,46 @@
                 if (dropY >= targetY) {
                     isDropping = false;
                     const row = findDropRow(col);
-                    grid[row][col] = activeElement;
-
-                    activeElement = null;
-                    setTimeout(() => {
-                        checkMerges();
-                    }, 100);
+                    
+                    if (activeElement.symbol === '💣') {
+                        // Bomb logic: clear the entire column
+                        for (let r = 0; r < GRID_ROWS; r++) {
+                            if (grid[r][col] !== null) {
+                                // Add a quick animation for each removed element
+                                animatingElements.push({
+                                    ...grid[r][col],
+                                    startX: col * CELL_SIZE,
+                                    startY: r * CELL_SIZE,
+                                    endX: col * CELL_SIZE,
+                                    endY: (row + 1) * CELL_SIZE, // Animate downwards
+                                    startTime: Date.now()
+                                });
+                                grid[r][col] = null;
+                            }
+                        }
+                        showMessage('BOOM! Column cleared!');
+                        playSound(100);
+                        activeElement = null;
+                        setTimeout(() => {
+                            checkMerges();
+                        }, ANIMATION_DURATION + 100);
+                    } else if (activeElement.symbol === '?') {
+                        // Wildcard logic: becomes a random element
+                        grid[row][col] = getRandomRegularElement();
+                        showMessage('Wildcard activated!');
+                        playSound(550);
+                        activeElement = null;
+                        setTimeout(() => {
+                            checkMerges();
+                        }, 100);
+                    } else {
+                        // Normal element drop
+                        grid[row][col] = activeElement;
+                        activeElement = null;
+                        setTimeout(() => {
+                            checkMerges();
+                        }, 100);
+                    }
                     
                 } else {
                     requestAnimationFrame(animateDrop);
@@ -856,6 +982,14 @@
                 messageBox.style.display = 'none';
             }, 1500);
         }
+        
+        function showRules() {
+            rulesBox.style.display = 'block';
+        }
+        
+        function hideRules() {
+            rulesBox.style.display = 'none';
+        }
 
         function clearHighlights() {
             document.querySelectorAll('.molecule-item').forEach(item => {
@@ -937,6 +1071,9 @@
             initGame();
             newGameBtn.textContent = 'New Game';
         });
+        
+        rulesBtn.addEventListener('click', showRules);
+        rulesCloseBtn.addEventListener('click', hideRules);
 
         soundBtn.addEventListener('click', () => {
             soundOn = !soundOn;
