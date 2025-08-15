@@ -11,6 +11,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Babel Standalone for JSX support in the browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
     <style>
         /* Custom styles for game elements not covered by Tailwind */
         body {
@@ -53,20 +55,16 @@
 
         const GRID_WIDTH = 6;
         const GRID_HEIGHT = 8;
-        const FREE_PLAY_DROP_INTERVAL = 1500;
-        const LEVEL_PLAY_BASE_DROP_INTERVAL = 1000;
 
         const getNewMolecule = () => {
             const keys = Object.keys(MOLECULES);
-            const molecule = keys[0]; // Start with Hydrogen
-            return molecule;
+            return keys[Math.floor(Math.random() * 2)]; // Randomly start with H or He
         };
 
         const App = () => {
             const [currentView, setCurrentView] = useState('home');
             const [gameMode, setGameMode] = useState('freeplay');
             const [grid, setGrid] = useState([]);
-            const [currentMolecule, setCurrentMolecule] = useState(null);
             const [nextMolecule, setNextMolecule] = useState(getNewMolecule());
             const [score, setScore] = useState(0);
             const [level, setLevel] = useState(1);
@@ -76,7 +74,6 @@
             const [modalMessage, setModalMessage] = useState('');
             const [modalConfirmAction, setModalConfirmAction] = useState(null);
             const [showSuccessModal, setShowSuccessModal] = useState(false);
-            const intervalRef = useRef(null);
 
             const initializeGrid = useCallback(() => {
                 const newGrid = Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(null));
@@ -84,118 +81,132 @@
                 setIsGameOver(false);
                 setScore(0);
                 setLevel(1);
-                setCurrentMolecule(null);
                 setNextMolecule(getNewMolecule());
             }, []);
 
-            const checkMerge = useCallback((y, x, newGrid) => {
-                const molecule = newGrid[y][x];
-                if (!molecule) return false;
-
-                const checkAndMerge = (y1, x1, y2, x2) => {
-                    if (y1 >= 0 && y1 < GRID_HEIGHT && x1 >= 0 && x1 < GRID_WIDTH &&
-                        y2 >= 0 && y2 < GRID_HEIGHT && x2 >= 0 && x2 < GRID_WIDTH &&
-                        newGrid[y1][x1] === molecule && newGrid[y2][x2] === molecule) {
-                        const nextMolecule = MOLECULES[molecule].next;
-                        if (nextMolecule) {
-                            newGrid[y1][x1] = null;
-                            newGrid[y2][x2] = null;
-                            newGrid[y][x] = nextMolecule;
-                            setScore(prev => prev + 50 * level);
-                            return true;
+            // Function to apply gravity to the grid
+            const applyGravity = useCallback((currentGrid) => {
+                const newGrid = currentGrid.map(row => [...row]);
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    let writeIndex = GRID_HEIGHT - 1;
+                    for (let y = GRID_HEIGHT - 1; y >= 0; y--) {
+                        if (newGrid[y][x] !== null) {
+                            newGrid[writeIndex][x] = newGrid[y][x];
+                            if (writeIndex !== y) {
+                                newGrid[y][x] = null;
+                            }
+                            writeIndex--;
                         }
                     }
-                    return false;
-                };
-
-                let merged = false;
-                // Check horizontal merge
-                if (checkAndMerge(y, x, y, x + 1) || checkAndMerge(y, x, y, x - 1)) merged = true;
-                // Check vertical merge
-                if (checkAndMerge(y, x, y + 1, x) || checkAndMerge(y, x, y - 1, x)) merged = true;
-                return merged;
-            }, [level]);
-
-            const findLowestSpot = useCallback((x, molecule) => {
-                let y = 0;
-                while (y < GRID_HEIGHT - 1 && grid[y + 1][x] === null) {
-                    y++;
                 }
-                return y;
-            }, [grid]);
+                return newGrid;
+            }, []);
+
+            // Function to check and perform merges
+            const processMerges = useCallback((currentGrid) => {
+                let merged = false;
+                let newGrid = currentGrid.map(row => [...row]);
+                const mergesFound = [];
+
+                // Check horizontal merges
+                for (let y = 0; y < GRID_HEIGHT; y++) {
+                    for (let x = 0; x < GRID_WIDTH - 1; x++) {
+                        if (newGrid[y][x] && newGrid[y][x] === newGrid[y][x + 1]) {
+                            mergesFound.push({ y: y, x: x, type: 'horizontal', molecule: newGrid[y][x] });
+                        }
+                    }
+                }
+
+                // Check vertical merges
+                for (let y = 0; y < GRID_HEIGHT - 1; y++) {
+                    for (let x = 0; x < GRID_WIDTH; x++) {
+                        if (newGrid[y][x] && newGrid[y][x] === newGrid[y + 1][x]) {
+                            mergesFound.push({ y: y, x: x, type: 'vertical', molecule: newGrid[y][x] });
+                        }
+                    }
+                }
+                
+                // Perform merges
+                if (mergesFound.length > 0) {
+                    merged = true;
+                    mergesFound.forEach(merge => {
+                        const nextMolecule = MOLECULES[merge.molecule].next;
+                        if (nextMolecule) {
+                            if (merge.type === 'horizontal') {
+                                newGrid[merge.y][merge.x] = nextMolecule;
+                                newGrid[merge.y][merge.x + 1] = null;
+                            } else { // vertical
+                                newGrid[merge.y][merge.x] = nextMolecule;
+                                newGrid[merge.y + 1][merge.x] = null;
+                            }
+                            setScore(prev => prev + 50 * level);
+                            // Check for level completion
+                            if (gameMode === 'levelplay' && nextMolecule === targetMolecule) {
+                                setShowSuccessModal(true);
+                                setLevel(prev => prev + 1);
+                                setTargetMolecule(MOLECULES[targetMolecule].next || targetMolecule);
+                            }
+                        }
+                    });
+                }
+
+                if (merged) {
+                    newGrid = applyGravity(newGrid);
+                    return processMerges(newGrid); // Recursively check for chain reactions
+                }
+
+                return newGrid;
+            }, [level, gameMode, targetMolecule, applyGravity]);
+
+            const findLowestSpot = useCallback((x, grid) => {
+                for (let y = GRID_HEIGHT - 1; y >= 0; y--) {
+                    if (grid[y][x] === null) {
+                        return y;
+                    }
+                }
+                return -1;
+            }, []);
 
             const placeMolecule = useCallback((x) => {
-                const y = findLowestSpot(x, currentMolecule);
-                const newGrid = grid.map(row => [...row]);
+                const y = findLowestSpot(x, grid);
                 
-                if (newGrid[y][x] !== null) {
+                if (y === -1) {
                     setIsGameOver(true);
                     return;
                 }
                 
-                newGrid[y][x] = currentMolecule;
+                let newGrid = grid.map(row => [...row]);
+                newGrid[y][x] = nextMolecule;
 
-                // Propagate merges
-                let merged = true;
-                while (merged) {
-                    merged = false;
-                    for (let row = GRID_HEIGHT - 1; row >= 0; row--) {
-                        for (let col = 0; col < GRID_WIDTH; col++) {
-                            if (checkMerge(row, col, newGrid)) {
-                                merged = true;
-                            }
-                        }
-                    }
-                }
-                
-                // Check for level completion
-                if (gameMode === 'levelplay') {
-                    const hasTarget = newGrid.flat().some(cell => cell === targetMolecule);
-                    if (hasTarget) {
-                        setShowSuccessModal(true);
-                        setLevel(prev => prev + 1);
-                        setTargetMolecule(MOLECULES[targetMolecule].next || targetMolecule);
-                    }
-                }
-
-                setGrid(newGrid);
-                setCurrentMolecule(null);
                 setNextMolecule(getNewMolecule());
-            }, [currentMolecule, grid, findLowestSpot, checkMerge, gameMode, targetMolecule]);
+
+                newGrid = applyGravity(newGrid);
+                newGrid = processMerges(newGrid);
+                
+                setGrid(newGrid);
+            }, [grid, nextMolecule, findLowestSpot, applyGravity, processMerges]);
 
             const handleKeyDown = useCallback((e) => {
                 if (isGameOver || currentView !== 'game') return;
-
                 const dropColumn = parseInt(e.key, 10) - 1;
                 if (!isNaN(dropColumn) && dropColumn >= 0 && dropColumn < GRID_WIDTH) {
-                    if (currentMolecule) {
-                        placeMolecule(dropColumn);
-                    }
+                    placeMolecule(dropColumn);
                 }
-            }, [isGameOver, currentView, currentMolecule, placeMolecule]);
+            }, [isGameOver, currentView, placeMolecule]);
 
             const handleClickDrop = useCallback((x) => {
-                if (isGameOver || currentView !== 'game' || !currentMolecule) return;
+                if (isGameOver || currentView !== 'game') return;
                 placeMolecule(x);
-            }, [isGameOver, currentView, currentMolecule, placeMolecule]);
+            }, [isGameOver, currentView, placeMolecule]);
 
             useEffect(() => {
-                if (isGameOver || currentView !== 'game') {
-                    if (intervalRef.current) clearInterval(intervalRef.current);
-                    return;
+                if (currentView === 'game') {
+                    window.addEventListener('keydown', handleKeyDown);
+                    return () => {
+                        window.removeEventListener('keydown', handleKeyDown);
+                    };
                 }
-                if (!currentMolecule) {
-                    setCurrentMolecule(nextMolecule);
-                }
-            }, [currentMolecule, nextMolecule, isGameOver, currentView]);
-
-            // Event listener for keyboard
-            useEffect(() => {
-                window.addEventListener('keydown', handleKeyDown);
-                return () => {
-                    window.removeEventListener('keydown', handleKeyDown);
-                };
-            }, [handleKeyDown]);
+            }, [handleKeyDown, currentView]);
 
             const handleModeSwitch = (mode) => {
                 if (score > 0) {
@@ -262,7 +273,7 @@
                             <li>Click the **down arrow** buttons or use keyboard keys **1-6** to drop molecules into the column of your choice.</li>
                             <li>When two identical molecules touch, they will merge into the next one on the periodic table.</li>
                             <li>The game ends if a column overflows.</li>
-                            <li>In **Level Mode**, you must create the target molecule to advance. The speed of merges may increase with each level.</li>
+                            <li>In **Level Mode**, you must create the target molecule to advance.</li>
                             <li>In **Free Play**, the game continues indefinitely.</li>
                         </ul>
                         <div className="flex justify-center space-x-4">
@@ -399,3 +410,4 @@
     </script>
 </body>
 </html>
+
