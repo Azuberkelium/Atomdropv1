@@ -17,6 +17,7 @@
             flex-direction: column;
             color: #333;
             overflow: hidden;
+            padding: 1rem;
         }
 
         .game-container {
@@ -270,8 +271,8 @@
             name: 'Carbon Monoxide',
             formula: '$CO$',
             targetCount: 3,
-            wildcardChance: 0,
-            specialTileChance: 0,
+            wildcardChance: 0.1,
+            specialTileChance: 0.05,
             points: 200
         },
         2: {
@@ -280,8 +281,8 @@
             name: 'Water',
             formula: '$H_2O$',
             targetCount: 3,
-            wildcardChance: 0,
-            specialTileChance: 0,
+            wildcardChance: 0.1,
+            specialTileChance: 0.05,
             points: 300
         },
         3: {
@@ -290,8 +291,8 @@
             name: 'Carbon Dioxide',
             formula: '$CO_2$',
             targetCount: 2,
-            wildcardChance: 0,
-            specialTileChance: 0,
+            wildcardChance: 0.1,
+            specialTileChance: 0.1,
             points: 300
         },
         4: {
@@ -440,8 +441,6 @@
      * @param {string} element - The element to drop.
      */
     function animateDrop(col, element) {
-        let row = 0;
-        // Find the lowest empty row in the column
         let finalRow = -1;
         for (let r = GRID_SIZE - 1; r >= 0; r--) {
             if (grid[r][col] === null) {
@@ -1277,4 +1276,3 @@
 
 </body>
 </html>
-
