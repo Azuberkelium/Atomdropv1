@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Molecule Merge</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f5;
+            flex-direction: column;
+            color: #333;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            width: 500px;
+        }
+
+        h1 {
+            color: #4a4a4a;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0 1rem;
+            font-weight: 700;
+        }
+
+        .target-molecule {
+            background-color: #e2e8f0;
+            padding: 0.5rem 1rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        #game-canvas {
+            border: 2px solid #a0a0a0;
+            background-color: #f8f8f8;
+            border-radius: 0.75rem;
+            touch-action: none; /* Prevents default browser actions on touch */
+        }
+
+        .controls {
+            margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .column-btn {
+            background-color: #6366f1;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+            transition: all 0.2s ease-in-out;
+            touch-action: manipulation;
+        }
+        
+        .column-btn:hover {
+            background-color: #4f46e5;
+            transform: translateY(-2px);
+        }
+
+        .column-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(99, 102, 241, 0.5);
+        }
+
+        .game-message {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 1000;
+        }
+        
+        .message-btn {
+            background-color: #f97316;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>Molecule Merge</h1>
+    <div class="info-bar">
+        <span>Level: <span id="level">1</span></span>
+        <div class="target-molecule">
+            Target: <span id="target-molecule"></span>
+        </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <div class="controls" id="column-buttons"></div>
+</div>
+
+<div class="game-message" id="gameOverMessage">
+    <h2>Game Over!</h2>
+    <p id="gameOverText"></p>
+    <button class="message-btn" onclick="resetGame()">Play Again</button>
+</div>
+
+<div class="game-message" id="winLevelMessage">
+    <h2>Level Complete!</h2>
+    <p>Get ready for the next challenge.</p>
+    <button class="message-btn" onclick="nextLevel()">Next Level</button>
+</div>
+
+<script>
+    // Constants for game board and elements
+    const GRID_SIZE = 5;
+    const TILE_SIZE = 80;
+    const PADDING = 10;
+    const TILE_RADIUS = 10;
+    const FONT_SIZE = 24;
+
+    // Canvas and context
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas dimensions
+    canvas.width = GRID_SIZE * (TILE_SIZE + PADDING) + PADDING;
+    canvas.height = GRID_SIZE * (TILE_SIZE + PADDING) + PADDING;
+
+    // Game state variables
+    let grid = [];
+    let currentLevel = 1;
+    let targetMoleculesFormed = 0;
+    let targetMolecule;
+    let nextTile = '';
+    let isGameOver = false;
+
+    // Elements and their properties
+    const ELEMENTS = {
+        H: { color: '#ffffff', textColor: '#444', name: 'Hydrogen' },
+        O: { color: '#ef4444', textColor: '#fff', name: 'Oxygen' },
+        C: { color: '#6b7280', textColor: '#fff', name: 'Carbon' },
+        N: { color: '#3b82f6', textColor: '#fff', name: 'Nitrogen' },
+        S: { color: '#f59e0b', textColor: '#fff', name: 'Sulfur' },
+        Cl: { color: '#16a34a', textColor: '#fff', name: 'Chlorine' }
+    };
+    
+    // Level configurations
+    const LEVELS = {
+        1: {
+            target: { H: 2, O: 1 },
+            elements: ['H', 'O'],
+            name: 'Water',
+            targetCount: 3
+        },
+        2: {
+            target: { C: 1, O: 2 },
+            elements: ['H', 'O', 'C'],
+            name: 'Carbon Dioxide',
+            targetCount: 2
+        },
+        3: {
+            target: { C: 1, O: 1 },
+            elements: ['H', 'O', 'C', 'N'],
+            name: 'Carbon Monoxide',
+            targetCount: 3
+        },
+        4: {
+            target: { S: 1, O: 3 },
+            elements: ['H', 'O', 'C', 'N', 'S'],
+            name: 'Sulfur Trioxide',
+            targetCount: 2
+        },
+        5: {
+            target: { N: 1, H: 3 },
+            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
+            name: 'Ammonia',
+            targetCount: 3
+        }
+    };
+    
+    // DOM elements
+    const levelDisplay = document.getElementById('level');
+    const targetMoleculeDisplay = document.getElementById('target-molecule');
+    const columnButtonsContainer = document.getElementById('column-buttons');
+    const gameOverMessage = document.getElementById('gameOverMessage');
+    const gameOverText = document.getElementById('gameOverText');
+    const winLevelMessage = document.getElementById('winLevelMessage');
+
+    /**
+     * Initializes a new game or level.
+     */
+    function initGame() {
+        // Reset game state
+        grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+        targetMoleculesFormed = 0;
+        isGameOver = false;
+        
+        // Get level configuration
+        const levelConfig = LEVELS[currentLevel] || LEVELS[1];
+        targetMolecule = levelConfig.target;
+        targetMoleculeDisplay.textContent = levelConfig.name;
+        levelDisplay.textContent = currentLevel;
+        
+        // Generate the first tile
+        generateNextTile();
+        
+        // Create column drop buttons
+        createColumnButtons();
+        
+        // Hide messages and start game loop
+        gameOverMessage.style.display = 'none';
+        winLevelMessage.style.display = 'none';
+        
+        draw();
+    }
+
+    /**
+     * Creates and adds the column drop buttons to the DOM.
+     */
+    function createColumnButtons() {
+        columnButtonsContainer.innerHTML = '';
+        for (let i = 0; i < GRID_SIZE; i++) {
+            const button = document.createElement('button');
+            button.className = 'column-btn';
+            button.textContent = i + 1;
+            button.onclick = () => dropTile(i);
+            columnButtonsContainer.appendChild(button);
+        }
+    }
+
+    /**
+     * Draws the entire game state on the canvas.
+     */
+    function draw() {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw grid background
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw grid cells and tiles
+        for (let row = 0; row < GRID_SIZE; row++) {
+            for (let col = 0; col < GRID_SIZE; col++) {
+                drawGridCell(col, row);
+                if (grid[row][col]) {
+                    drawTile(col, row, grid[row][col]);
+                }
+            }
+        }
+        
+        // Draw the next tile preview
+        if (nextTile) {
+            drawNextTilePreview();
+        }
+    }
+
+    /**
+     * Draws a single grid cell.
+     * @param {number} col - The column index.
+     * @param {number} row - The row index.
+     */
+    function drawGridCell(col, row) {
+        ctx.fillStyle = '#d1d5db';
+        ctx.strokeStyle = '#9ca3af';
+        ctx.lineWidth = 1;
+        const x = col * (TILE_SIZE + PADDING) + PADDING;
+        const y = row * (TILE_SIZE + PADDING) + PADDING;
+        ctx.beginPath();
+        ctx.roundRect(x, y, TILE_SIZE, TILE_SIZE, TILE_RADIUS);
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /**
+     * Draws a tile on the canvas.
+     * @param {number} col - The column index.
+     * @param {number} row - The row index.
+     * @param {string} element - The element symbol (e.g., 'H', 'O').
+     */
+    function drawTile(col, row, element) {
+        const x = col * (TILE_SIZE + PADDING) + PADDING;
+        const y = row * (TILE_SIZE + PADDING) + PADDING;
+        
+        const elementData = ELEMENTS[element];
+
+        // Draw tile background
+        ctx.fillStyle = elementData.color;
+        ctx.beginPath();
+        ctx.roundRect(x, y, TILE_SIZE, TILE_SIZE, TILE_RADIUS);
+        ctx.fill();
+        
+        // Draw element text
+        ctx.fillStyle = elementData.textColor;
+        ctx.font = `bold ${FONT_SIZE}px 'Inter'`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(element, x + TILE_SIZE / 2, y + TILE_SIZE / 2);
+    }
+    
+    /**
+     * Draws the preview of the next tile to drop.
+     */
+    function drawNextTilePreview() {
+        const x = canvas.width / 2;
+        const y = PADDING / 2;
+        
+        ctx.font = `bold ${FONT_SIZE * 0.8}px 'Inter'`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#444';
+        ctx.fillText('Next', x, y - 20);
+        
+        const previewSize = TILE_SIZE * 0.7;
+        const elementData = ELEMENTS[nextTile];
+        
+        // Draw preview tile background
+        ctx.fillStyle = elementData.color;
+        ctx.beginPath();
+        ctx.roundRect(x - previewSize / 2, y + 5, previewSize, previewSize, TILE_RADIUS * 0.7);
+        ctx.fill();
+        
+        // Draw element text
+        ctx.fillStyle = elementData.textColor;
+        ctx.font = `bold ${FONT_SIZE * 0.7}px 'Inter'`;
+        ctx.fillText(nextTile, x, y + 5 + previewSize / 2);
+    }
+
+    /**
+     * Generates a random element for the next tile based on the current level.
+     */
+    function generateNextTile() {
+        const levelConfig = LEVELS[currentLevel] || LEVELS[1];
+        const elements = levelConfig.elements;
+        const randomIndex = Math.floor(Math.random() * elements.length);
+        nextTile = elements[randomIndex];
+    }
+    
+    /**
+     * Drops the current tile into the specified column.
+     * @param {number} col - The column to drop the tile into.
+     */
+    function dropTile(col) {
+        if (isGameOver) return;
+
+        // Find the first empty row from the bottom
+        let row = GRID_SIZE - 1;
+        while (row >= 0 && grid[row][col] !== null) {
+            row--;
+        }
+        
+        // If column is full, end game
+        if (row < 0) {
+            endGame('Column is full!');
+            return;
+        }
+        
+        // Place the tile and generate the next one
+        grid[row][col] = nextTile;
+        generateNextTile();
+        
+        // Check for molecule formations and redraw
+        checkAndRemoveMolecules();
+        draw();
+        
+        // Check for game over condition (if grid is full)
+        if (isGridFull()) {
+            endGame('Grid is full!');
+        }
+    }
+    
+    /**
+     * Checks if the entire grid is full of tiles.
+     * @returns {boolean} True if the grid is full, false otherwise.
+     */
+    function isGridFull() {
+        for (let row = 0; row < GRID_SIZE; row++) {
+            for (let col = 0; col < GRID_SIZE; col++) {
+                if (grid[row][col] === null) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Checks for molecule formations and removes them from the grid.
+     */
+    function checkAndRemoveMolecules() {
+        const levelConfig = LEVELS[currentLevel] || LEVELS[1];
+        const target = levelConfig.target;
+        const removedTiles = new Set();
+
+        // Iterate through all cells to find potential molecules
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                // Check all possible directions for a match
+                const matches = findMatchingMolecule(r, c, target);
+                if (matches) {
+                    // Remove matched tiles
+                    matches.forEach(tile => {
+                        const key = `${tile.r},${tile.c}`;
+                        if (!removedTiles.has(key)) {
+                            grid[tile.r][tile.c] = null;
+                            removedTiles.add(key);
+                        }
+                    });
+                    
+                    targetMoleculesFormed++;
+                    
+                    // Check for level win condition
+                    if (targetMoleculesFormed >= levelConfig.targetCount) {
+                        winLevel();
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // After removing tiles, let tiles fall down
+        gravity();
+    }
+    
+    /**
+     * Moves tiles down to fill empty spaces.
+     */
+    function gravity() {
+        for (let c = 0; c < GRID_SIZE; c++) {
+            let emptyRow = GRID_SIZE - 1;
+            for (let r = GRID_SIZE - 1; r >= 0; r--) {
+                if (grid[r][c] !== null) {
+                    if (r !== emptyRow) {
+                        grid[emptyRow][c] = grid[r][c];
+                        grid[r][c] = null;
+                    }
+                    emptyRow--;
+                }
+            }
+        }
+    }
+
+    /**
+     * Finds a matching molecule starting from a given cell.
+     * @param {number} startRow - The starting row.
+     * @param {number} startCol - The starting column.
+     * @param {Object} target - The target molecule composition.
+     * @returns {Array|null} An array of tile coordinates if a match is found, otherwise null.
+     */
+    function findMatchingMolecule(startRow, startCol, target) {
+        const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
+        const stack = [{ r: startRow, c: startCol }];
+        visited[startRow][startCol] = true;
+        const foundTiles = [];
+
+        // Check if the starting tile is valid for the target molecule
+        const startElement = grid[startRow][startCol];
+        if (!startElement || !target[startElement]) {
+            return null;
+        }
+
+        // Use a recursive depth-first search to find connected tiles
+        function search(row, col, elementsFound) {
+            // Base case: if we have found all required elements
+            if (foundTiles.length === Object.values(target).reduce((sum, val) => sum + val, 0)) {
+                // Validate the found elements
+                for (const element in target) {
+                    if ((elementsFound[element] || 0) !== target[element]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            // Check neighbors
+            const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+            for (const [dr, dc] of directions) {
+                const newRow = row + dr;
+                const newCol = col + dc;
+
+                if (newRow >= 0 && newRow < GRID_SIZE && newCol >= 0 && newCol < GRID_SIZE && !visited[newRow][newCol]) {
+                    const newElement = grid[newRow][newCol];
+                    if (newElement && target[newElement] && (elementsFound[newElement] || 0) < target[newElement]) {
+                        visited[newRow][newCol] = true;
+                        foundTiles.push({ r: newRow, c: newCol });
+                        elementsFound[newElement] = (elementsFound[newElement] || 0) + 1;
+                        
+                        if (search(newRow, newCol, elementsFound)) {
+                            return true;
+                        }
+
+                        // Backtrack
+                        foundTiles.pop();
+                        elementsFound[newElement]--;
+                        visited[newRow][newCol] = false;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Initial call to the search function
+        const initialElements = {};
+        initialElements[startElement] = 1;
+        foundTiles.push({ r: startRow, c: startCol });
+        if (search(startRow, startCol, initialElements)) {
+            return foundTiles;
+        }
+
+        return null;
+    }
+
+    /**
+     * Ends the game and displays a message.
+     * @param {string} message - The message to display.
+     */
+    function endGame(message) {
+        isGameOver = true;
+        gameOverText.textContent = message;
+        gameOverMessage.style.display = 'flex';
+    }
+    
+    /**
+     * Resets the game to level 1.
+     */
+    function resetGame() {
+        currentLevel = 1;
+        initGame();
+    }
+
+    /**
+     * Advances to the next level.
+     */
+    function winLevel() {
+        winLevelMessage.style.display = 'flex';
+        currentLevel++;
+        if (currentLevel > Object.keys(LEVELS).length) {
+            currentLevel = 1; // Loop back to the beginning
+            gameOverText.textContent = 'You have completed all levels! Starting over.';
+            gameOverMessage.style.display = 'flex';
+            winLevelMessage.style.display = 'none';
+        }
+    }
+    
+    /**
+     * Moves to the next level after winning.
+     */
+    function nextLevel() {
+        initGame();
+    }
+    
+    // Initial call to start the game
+    window.onload = function() {
+        initGame();
+    };
+
+    // Responsive canvas resizing
+    window.addEventListener('resize', () => {
+        const containerWidth = document.querySelector('.game-container').offsetWidth;
+        const newSize = Math.min(containerWidth, 500);
+        canvas.width = newSize;
+        canvas.height = newSize;
+        draw();
+    });
+</script>
+
+</body>
+</html>
