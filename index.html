@@ -138,6 +138,13 @@
         .modal-content h2 {
             margin-top: 0;
         }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
 
         .modal-content button {
             background-color: #f97316;
@@ -148,12 +155,6 @@
             cursor: pointer;
             font-size: 1rem;
             font-weight: 700;
-            margin-top: 1rem;
-        }
-
-        .rules-content p, .formula-content p {
-            text-align: left;
-            margin-bottom: 0.5rem;
         }
     </style>
 </head>
@@ -163,6 +164,7 @@
     <h1>Molecule Merge</h1>
     <div class="info-bar">
         <span>Level: <span id="level">1</span></span>
+        <span>Time: <span id="timer">00:00</span></span>
         <div class="target-molecule">
             Target: <span id="target-molecule"></span>
         </div>
@@ -177,7 +179,7 @@
     <div class="modal-content">
         <h2 id="modal-title"></h2>
         <div id="modal-body"></div>
-        <button id="modal-button"></button>
+        <div class="modal-buttons" id="modal-buttons"></div>
     </div>
 </div>
 
@@ -206,6 +208,8 @@
     let isGameOver = false;
     let isAnimating = false;
     let mergingTiles = [];
+    let startTime;
+    let timerInterval;
 
     // Elements and their properties
     const ELEMENTS = {
@@ -221,6 +225,14 @@
     // Level configurations
     const LEVELS = {
         1: {
+            target: { C: 1, O: 1 },
+            elements: ['H', 'O', 'C', 'N'],
+            name: 'Carbon Monoxide',
+            formula: '$CO$',
+            targetCount: 3,
+            wildcardChance: 0
+        },
+        2: {
             target: { H: 2, O: 1 },
             elements: ['H', 'O'],
             name: 'Water',
@@ -228,20 +240,12 @@
             targetCount: 3,
             wildcardChance: 0
         },
-        2: {
+        3: {
             target: { C: 1, O: 2 },
             elements: ['H', 'O', 'C'],
             name: 'Carbon Dioxide',
             formula: '$CO_2$',
             targetCount: 2,
-            wildcardChance: 0
-        },
-        3: {
-            target: { C: 1, O: 1 },
-            elements: ['H', 'O', 'C', 'N'],
-            name: 'Carbon Monoxide',
-            formula: '$CO$',
-            targetCount: 3,
             wildcardChance: 0
         },
         4: {
@@ -304,12 +308,13 @@
     
     // DOM elements
     const levelDisplay = document.getElementById('level');
+    const timerDisplay = document.getElementById('timer');
     const targetMoleculeDisplay = document.getElementById('target-molecule');
     const rulesButton = document.getElementById('rules-button');
     const gameModal = document.getElementById('gameModal');
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
-    const modalButton = document.getElementById('modal-button');
+    const modalButtonsContainer = document.getElementById('modal-buttons');
 
     /**
      * Initializes a new game or level.
@@ -329,6 +334,23 @@
         
         hideModal();
         draw();
+        
+        // Start the timer
+        startTime = Date.now();
+        clearInterval(timerInterval);
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+    }
+    
+    /**
+     * Updates the timer display.
+     */
+    function updateTimerDisplay() {
+        if (!startTime) return;
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(elapsedSeconds / 60);
+        const seconds = elapsedSeconds % 60;
+        const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        timerDisplay.textContent = formattedTime;
     }
 
     /**
@@ -515,7 +537,11 @@
                     const matches = findMatchingMolecule(r, c, target);
                     if (matches) {
                         moleculesFound++;
-                        showMessage('Molecule Found!', `You successfully formed ${levelConfig.name}!`, 'OK', hideModal);
+                        showMessage(
+                            'Molecule Found!',
+                            `You successfully formed ${levelConfig.name}!`,
+                            [{ text: 'OK', action: hideModal }]
+                        );
                         matches.forEach(tile => {
                             const key = `${tile.r},${tile.c}`;
                             if (!tilesToRemove.has(key)) {
@@ -693,17 +719,24 @@
     }
 
     /**
-     * Shows a modal with custom content.
+     * Shows a modal with custom content and buttons.
      * @param {string} title - The title of the modal.
      * @param {string} bodyContent - The HTML content for the modal body.
-     * @param {string} buttonText - The text for the modal button.
-     * @param {Function} buttonAction - The function to call when the button is clicked.
+     * @param {Array<Object>} actions - An array of objects with 'text' and 'action' for each button.
      */
-    function showMessage(title, bodyContent, buttonText, buttonAction) {
+    function showMessage(title, bodyContent, actions) {
         modalTitle.textContent = title;
         modalBody.innerHTML = bodyContent;
-        modalButton.textContent = buttonText;
-        modalButton.onclick = buttonAction;
+        modalButtonsContainer.innerHTML = ''; // Clear previous buttons
+        
+        actions.forEach(action => {
+            const button = document.createElement('button');
+            button.className = 'game-btn';
+            button.textContent = action.text;
+            button.onclick = action.action;
+            modalButtonsContainer.appendChild(button);
+        });
+        
         gameModal.classList.add('active');
     }
 
@@ -720,14 +753,26 @@
      */
     function endGame(message) {
         isGameOver = true;
-        showMessage('Game Over!', message, 'Play Again', resetGame);
+        clearInterval(timerInterval);
+        const actions = [
+            { text: 'Start this Level Again', action: restartCurrentLevel },
+            { text: 'Start from Level 1', action: restartFromLevelOne }
+        ];
+        showMessage('Game Over!', message, actions);
     }
     
     /**
      * Resets the game to level 1.
      */
-    function resetGame() {
+    function restartFromLevelOne() {
         currentLevel = 1;
+        initGame();
+    }
+    
+    /**
+     * Restarts the current level.
+     */
+    function restartCurrentLevel() {
         initGame();
     }
 
@@ -735,13 +780,23 @@
      * Advances to the next level.
      */
     function winLevel() {
+        clearInterval(timerInterval);
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        
         currentLevel++;
+        
+        let message;
+        let actions;
         if (currentLevel > Object.keys(LEVELS).length) {
             currentLevel = 1; // Loop back to the beginning
-            showMessage('You Win!', 'You have completed all levels! Starting over.', 'Play Again', initGame);
+            message = `You have completed all levels! You finished this level in ${elapsedSeconds} seconds. Starting over.`;
+            actions = [{ text: 'Play Again', action: initGame }];
         } else {
-            showMessage('Level Complete!', 'Get ready for the next challenge.', 'Next Level', nextLevel);
+            message = `You finished this level in ${elapsedSeconds} seconds! Get ready for the next challenge.`;
+            actions = [{ text: 'Next Level', action: nextLevel }];
         }
+        
+        showMessage('Level Complete!', message, actions);
     }
     
     /**
@@ -762,7 +817,7 @@
             <p><strong>Wildcard Tile:</strong> The purple '🎲' tile can act as any element to help you complete a molecule.</p>
             <p><strong>Game Over:</strong> The game ends if any column fills up completely to the top.</p>
         `;
-        showMessage('Rules', rulesHtml, 'Got it!', hideModal);
+        showMessage('Rules', rulesHtml, [{ text: 'Got it!', action: hideModal }]);
     }
 
     /**
@@ -778,7 +833,7 @@
             body += `<li>${levelConfig.target[element]} x ${ELEMENTS[element].name} (${element})</li>`;
         }
         body += `</ul>`;
-        showMessage('Chemical Formula', body, 'OK', hideModal);
+        showMessage('Chemical Formula', body, [{ text: 'OK', action: hideModal }]);
     }
     
     // Initial call to start the game
@@ -810,4 +865,3 @@
 
 </body>
 </html>
-
