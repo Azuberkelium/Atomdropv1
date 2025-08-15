@@ -52,6 +52,12 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .target-molecule:hover {
+            transform: translateY(-2px);
         }
         
         #game-canvas {
@@ -64,10 +70,12 @@
         .controls {
             margin-top: 1rem;
             display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 1rem;
         }
-        
-        .column-btn {
+
+        .game-btn, .column-btn {
             background-color: #6366f1;
             color: white;
             border: none;
@@ -81,30 +89,57 @@
             touch-action: manipulation;
         }
         
-        .column-btn:hover {
+        .game-btn:hover, .column-btn:hover {
             background-color: #4f46e5;
             transform: translateY(-2px);
         }
 
-        .column-btn:active {
+        .game-btn:active, .column-btn:active {
             transform: translateY(0);
             box-shadow: 0 2px 5px rgba(99, 102, 241, 0.5);
         }
-
-        .game-message {
-            position: absolute;
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-color: rgba(0, 0, 0, 0.7);
-            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: white;
             padding: 2rem;
             border-radius: 1rem;
             text-align: center;
-            display: none;
-            flex-direction: column;
-            gap: 1rem;
-            z-index: 1000;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-in-out;
         }
-        
-        .message-btn {
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+        }
+
+        .modal-content button {
             background-color: #f97316;
             color: white;
             border: none;
@@ -113,6 +148,12 @@
             cursor: pointer;
             font-size: 1rem;
             font-weight: 700;
+            margin-top: 1rem;
+        }
+
+        .rules-content p, .formula-content p {
+            text-align: left;
+            margin-bottom: 0.5rem;
         }
     </style>
 </head>
@@ -127,19 +168,18 @@
         </div>
     </div>
     <canvas id="game-canvas"></canvas>
-    <div class="controls" id="column-buttons"></div>
+    <div class="controls" id="controls">
+        <button class="game-btn" id="rules-button">Rules</button>
+        <div id="column-buttons"></div>
+    </div>
 </div>
 
-<div class="game-message" id="gameOverMessage">
-    <h2>Game Over!</h2>
-    <p id="gameOverText"></p>
-    <button class="message-btn" onclick="resetGame()">Play Again</button>
-</div>
-
-<div class="game-message" id="winLevelMessage">
-    <h2>Level Complete!</h2>
-    <p>Get ready for the next challenge.</p>
-    <button class="message-btn" onclick="nextLevel()">Next Level</button>
+<div class="modal-overlay" id="gameModal">
+    <div class="modal-content">
+        <h2 id="modal-title"></h2>
+        <div id="modal-body"></div>
+        <button id="modal-button"></button>
+    </div>
 </div>
 
 <script>
@@ -165,6 +205,8 @@
     let targetMolecule;
     let nextTile = '';
     let isGameOver = false;
+    let isAnimating = false;
+    let mergingTiles = [];
 
     // Elements and their properties
     const ELEMENTS = {
@@ -173,7 +215,8 @@
         C: { color: '#6b7280', textColor: '#fff', name: 'Carbon' },
         N: { color: '#3b82f6', textColor: '#fff', name: 'Nitrogen' },
         S: { color: '#f59e0b', textColor: '#fff', name: 'Sulfur' },
-        Cl: { color: '#16a34a', textColor: '#fff', name: 'Chlorine' }
+        Cl: { color: '#16a34a', textColor: '#fff', name: 'Chlorine' },
+        '🎲': { color: '#a855f7', textColor: '#fff', name: 'Wildcard Dice' } // Special wildcard tile, now a dice emoji
     };
     
     // Level configurations
@@ -182,31 +225,81 @@
             target: { H: 2, O: 1 },
             elements: ['H', 'O'],
             name: 'Water',
-            targetCount: 3
+            formula: '$H_2O$',
+            targetCount: 3,
+            wildcardChance: 0
         },
         2: {
             target: { C: 1, O: 2 },
             elements: ['H', 'O', 'C'],
             name: 'Carbon Dioxide',
-            targetCount: 2
+            formula: '$CO_2$',
+            targetCount: 2,
+            wildcardChance: 0
         },
         3: {
             target: { C: 1, O: 1 },
             elements: ['H', 'O', 'C', 'N'],
             name: 'Carbon Monoxide',
-            targetCount: 3
+            formula: '$CO$',
+            targetCount: 3,
+            wildcardChance: 0
         },
         4: {
             target: { S: 1, O: 3 },
             elements: ['H', 'O', 'C', 'N', 'S'],
             name: 'Sulfur Trioxide',
-            targetCount: 2
+            formula: '$SO_3$',
+            targetCount: 2,
+            wildcardChance: 0
         },
         5: {
             target: { N: 1, H: 3 },
             elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
             name: 'Ammonia',
-            targetCount: 3
+            formula: '$NH_3$',
+            targetCount: 3,
+            wildcardChance: 0.1
+        },
+        6: {
+            target: { C: 1, H: 4 },
+            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
+            name: 'Methane',
+            formula: '$CH_4$',
+            targetCount: 2,
+            wildcardChance: 0.1
+        },
+        7: {
+            target: { H: 2, O: 2 },
+            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
+            name: 'Hydrogen Peroxide',
+            formula: '$H_2O_2$',
+            targetCount: 3,
+            wildcardChance: 0.15
+        },
+        8: {
+            target: { S: 1, O: 2 },
+            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
+            name: 'Sulfur Dioxide',
+            formula: '$SO_2$',
+            targetCount: 2,
+            wildcardChance: 0.15
+        },
+        9: {
+            target: { N: 1, H: 3 },
+            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
+            name: 'Ammonia',
+            formula: '$NH_3$',
+            targetCount: 3,
+            wildcardChance: 0.2
+        },
+        10: {
+            target: { C: 1, Cl: 4 },
+            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
+            name: 'Carbon Tetrachloride',
+            formula: '$CCl_4$',
+            targetCount: 2,
+            wildcardChance: 0.2
         }
     };
     
@@ -214,35 +307,30 @@
     const levelDisplay = document.getElementById('level');
     const targetMoleculeDisplay = document.getElementById('target-molecule');
     const columnButtonsContainer = document.getElementById('column-buttons');
-    const gameOverMessage = document.getElementById('gameOverMessage');
-    const gameOverText = document.getElementById('gameOverText');
-    const winLevelMessage = document.getElementById('winLevelMessage');
+    const rulesButton = document.getElementById('rules-button');
+    const gameModal = document.getElementById('gameModal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const modalButton = document.getElementById('modal-button');
 
     /**
      * Initializes a new game or level.
      */
     function initGame() {
-        // Reset game state
         grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
         targetMoleculesFormed = 0;
         isGameOver = false;
+        isAnimating = false;
         
-        // Get level configuration
         const levelConfig = LEVELS[currentLevel] || LEVELS[1];
         targetMolecule = levelConfig.target;
         targetMoleculeDisplay.textContent = levelConfig.name;
         levelDisplay.textContent = currentLevel;
         
-        // Generate the first tile
         generateNextTile();
-        
-        // Create column drop buttons
         createColumnButtons();
         
-        // Hide messages and start game loop
-        gameOverMessage.style.display = 'none';
-        winLevelMessage.style.display = 'none';
-        
+        hideModal();
         draw();
     }
 
@@ -254,7 +342,7 @@
         for (let i = 0; i < GRID_SIZE; i++) {
             const button = document.createElement('button');
             button.className = 'column-btn';
-            button.textContent = i + 1;
+            button.textContent = `Drop in Col ${i + 1}`;
             button.onclick = () => dropTile(i);
             columnButtonsContainer.appendChild(button);
         }
@@ -264,14 +352,11 @@
      * Draws the entire game state on the canvas.
      */
     function draw() {
-        // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Draw grid background
         ctx.fillStyle = '#e5e7eb';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw grid cells and tiles
         for (let row = 0; row < GRID_SIZE; row++) {
             for (let col = 0; col < GRID_SIZE; col++) {
                 drawGridCell(col, row);
@@ -281,10 +366,7 @@
             }
         }
         
-        // Draw the next tile preview
-        if (nextTile) {
-            drawNextTilePreview();
-        }
+        drawNextTilePreview();
     }
 
     /**
@@ -308,26 +390,37 @@
      * Draws a tile on the canvas.
      * @param {number} col - The column index.
      * @param {number} row - The row index.
-     * @param {string} element - The element symbol (e.g., 'H', 'O').
+     * @param {string} element - The element symbol (e.g., 'H', 'O', '🎲').
+     * @param {number} [scale=1] - The scale of the tile for animation.
      */
-    function drawTile(col, row, element) {
+    function drawTile(col, row, element, scale = 1) {
         const x = col * (TILE_SIZE + PADDING) + PADDING;
         const y = row * (TILE_SIZE + PADDING) + PADDING;
         
         const elementData = ELEMENTS[element];
+        const tileScaledSize = TILE_SIZE * scale;
+        const scaledX = x + (TILE_SIZE - tileScaledSize) / 2;
+        const scaledY = y + (TILE_SIZE - tileScaledSize) / 2;
 
-        // Draw tile background
         ctx.fillStyle = elementData.color;
         ctx.beginPath();
-        ctx.roundRect(x, y, TILE_SIZE, TILE_SIZE, TILE_RADIUS);
+        ctx.roundRect(scaledX, scaledY, tileScaledSize, tileScaledSize, TILE_RADIUS * scale);
         ctx.fill();
         
-        // Draw element text
         ctx.fillStyle = elementData.textColor;
-        ctx.font = `bold ${FONT_SIZE}px 'Inter'`;
+        ctx.font = `bold ${FONT_SIZE * scale}px 'Inter'`;
+        
+        // Handle dice emoji separately for better rendering
+        if (element === '🎲') {
+            ctx.font = `bold ${FONT_SIZE * scale * 1.5}px sans-serif`;
+            ctx.fillText(element, scaledX + tileScaledSize / 2, scaledY + tileScaledSize / 2 + 5);
+        } else {
+            ctx.font = `bold ${FONT_SIZE * scale}px 'Inter'`;
+            ctx.fillText(element, scaledX + tileScaledSize / 2, scaledY + tileScaledSize / 2);
+        }
+        
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(element, x + TILE_SIZE / 2, y + TILE_SIZE / 2);
     }
     
     /**
@@ -346,16 +439,25 @@
         const previewSize = TILE_SIZE * 0.7;
         const elementData = ELEMENTS[nextTile];
         
-        // Draw preview tile background
         ctx.fillStyle = elementData.color;
         ctx.beginPath();
         ctx.roundRect(x - previewSize / 2, y + 5, previewSize, previewSize, TILE_RADIUS * 0.7);
         ctx.fill();
         
-        // Draw element text
         ctx.fillStyle = elementData.textColor;
         ctx.font = `bold ${FONT_SIZE * 0.7}px 'Inter'`;
-        ctx.fillText(nextTile, x, y + 5 + previewSize / 2);
+        
+        // Handle dice emoji separately for better rendering
+        if (nextTile === '🎲') {
+            ctx.font = `bold ${FONT_SIZE * 0.7 * 1.5}px sans-serif`;
+            ctx.fillText(nextTile, x, y + 5 + previewSize / 2 + 5);
+        } else {
+            ctx.font = `bold ${FONT_SIZE * 0.7}px 'Inter'`;
+            ctx.fillText(nextTile, x, y + 5 + previewSize / 2);
+        }
+        
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
     }
 
     /**
@@ -364,8 +466,14 @@
     function generateNextTile() {
         const levelConfig = LEVELS[currentLevel] || LEVELS[1];
         const elements = levelConfig.elements;
-        const randomIndex = Math.floor(Math.random() * elements.length);
-        nextTile = elements[randomIndex];
+        const wildcardChance = levelConfig.wildcardChance;
+
+        if (Math.random() < wildcardChance) {
+            nextTile = '🎲';
+        } else {
+            const randomIndex = Math.floor(Math.random() * elements.length);
+            nextTile = elements[randomIndex];
+        }
     }
     
     /**
@@ -373,29 +481,24 @@
      * @param {number} col - The column to drop the tile into.
      */
     function dropTile(col) {
-        if (isGameOver) return;
+        if (isGameOver || isAnimating) return;
 
-        // Find the first empty row from the bottom
         let row = GRID_SIZE - 1;
         while (row >= 0 && grid[row][col] !== null) {
             row--;
         }
         
-        // If column is full, end game
         if (row < 0) {
             endGame('Column is full!');
             return;
         }
         
-        // Place the tile and generate the next one
         grid[row][col] = nextTile;
         generateNextTile();
         
-        // Check for molecule formations and redraw
         checkAndRemoveMolecules();
         draw();
         
-        // Check for game over condition (if grid is full)
         if (isGridFull()) {
             endGame('Grid is full!');
         }
@@ -422,38 +525,81 @@
     function checkAndRemoveMolecules() {
         const levelConfig = LEVELS[currentLevel] || LEVELS[1];
         const target = levelConfig.target;
-        const removedTiles = new Set();
+        let moleculesFound = 0;
+        const tilesToRemove = new Set();
+        mergingTiles = [];
 
-        // Iterate through all cells to find potential molecules
         for (let r = 0; r < GRID_SIZE; r++) {
             for (let c = 0; c < GRID_SIZE; c++) {
-                // Check all possible directions for a match
-                const matches = findMatchingMolecule(r, c, target);
-                if (matches) {
-                    // Remove matched tiles
-                    matches.forEach(tile => {
-                        const key = `${tile.r},${tile.c}`;
-                        if (!removedTiles.has(key)) {
-                            grid[tile.r][tile.c] = null;
-                            removedTiles.add(key);
-                        }
-                    });
-                    
-                    targetMoleculesFormed++;
-                    
-                    // Check for level win condition
-                    if (targetMoleculesFormed >= levelConfig.targetCount) {
-                        winLevel();
-                        return;
+                if (grid[r][c] !== null) {
+                    const matches = findMatchingMolecule(r, c, target);
+                    if (matches) {
+                        moleculesFound++;
+                        showMessage('Molecule Found!', `You successfully formed ${levelConfig.name}!`, 'OK', hideModal);
+                        matches.forEach(tile => {
+                            const key = `${tile.r},${tile.c}`;
+                            if (!tilesToRemove.has(key)) {
+                                tilesToRemove.add(key);
+                                mergingTiles.push({ r: tile.r, c: tile.c, scale: 1, element: grid[tile.r][tile.c] });
+                            }
+                        });
                     }
                 }
             }
         }
         
-        // After removing tiles, let tiles fall down
-        gravity();
+        if (mergingTiles.length > 0) {
+            isAnimating = true;
+            targetMoleculesFormed += moleculesFound;
+            startMergeAnimation();
+        } else {
+            gravity();
+            draw();
+        }
     }
     
+    /**
+     * Starts the animation for merging tiles.
+     */
+    function startMergeAnimation() {
+        const animationDuration = 500; // milliseconds
+        const startTime = Date.now();
+
+        function animate() {
+            const elapsed = Date.now() - startTime;
+            const progress = elapsed / animationDuration;
+
+            if (progress >= 1) {
+                isAnimating = false;
+                // Remove tiles from grid and apply gravity after animation
+                mergingTiles.forEach(tile => {
+                    grid[tile.r][tile.c] = null;
+                });
+                mergingTiles = [];
+                gravity();
+                draw();
+                
+                // Check for level win condition
+                const levelConfig = LEVELS[currentLevel] || LEVELS[1];
+                if (targetMoleculesFormed >= levelConfig.targetCount) {
+                    winLevel();
+                }
+                return;
+            }
+
+            // Draw the animation frame
+            draw();
+            mergingTiles.forEach(tile => {
+                const newScale = 1 - progress;
+                drawTile(tile.c, tile.r, tile.element, newScale);
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    }
+
     /**
      * Moves tiles down to fill empty spaces.
      */
@@ -473,7 +619,7 @@
     }
 
     /**
-     * Finds a matching molecule starting from a given cell.
+     * Finds a matching molecule starting from a given cell using a Depth-First Search.
      * @param {number} startRow - The starting row.
      * @param {number} startCol - The starting column.
      * @param {Object} target - The target molecule composition.
@@ -481,21 +627,10 @@
      */
     function findMatchingMolecule(startRow, startCol, target) {
         const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
-        const stack = [{ r: startRow, c: startCol }];
-        visited[startRow][startCol] = true;
         const foundTiles = [];
 
-        // Check if the starting tile is valid for the target molecule
-        const startElement = grid[startRow][startCol];
-        if (!startElement || !target[startElement]) {
-            return null;
-        }
-
-        // Use a recursive depth-first search to find connected tiles
         function search(row, col, elementsFound) {
-            // Base case: if we have found all required elements
             if (foundTiles.length === Object.values(target).reduce((sum, val) => sum + val, 0)) {
-                // Validate the found elements
                 for (const element in target) {
                     if ((elementsFound[element] || 0) !== target[element]) {
                         return false;
@@ -504,7 +639,6 @@
                 return true;
             }
 
-            // Check neighbors
             const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
             for (const [dr, dc] of directions) {
                 const newRow = row + dr;
@@ -512,7 +646,25 @@
 
                 if (newRow >= 0 && newRow < GRID_SIZE && newCol >= 0 && newCol < GRID_SIZE && !visited[newRow][newCol]) {
                     const newElement = grid[newRow][newCol];
-                    if (newElement && target[newElement] && (elementsFound[newElement] || 0) < target[newElement]) {
+                    if (newElement === null) continue;
+
+                    if (newElement === '🎲') {
+                        for (const targetElement in target) {
+                            if ((elementsFound[targetElement] || 0) < target[targetElement]) {
+                                visited[newRow][newCol] = true;
+                                foundTiles.push({ r: newRow, c: newCol });
+                                elementsFound[targetElement] = (elementsFound[targetElement] || 0) + 1;
+                                
+                                if (search(newRow, newCol, elementsFound)) {
+                                    return true;
+                                }
+
+                                foundTiles.pop();
+                                elementsFound[targetElement]--;
+                                visited[newRow][newCol] = false;
+                            }
+                        }
+                    } else if (target[newElement] && (elementsFound[newElement] || 0) < target[newElement]) {
                         visited[newRow][newCol] = true;
                         foundTiles.push({ r: newRow, c: newCol });
                         elementsFound[newElement] = (elementsFound[newElement] || 0) + 1;
@@ -521,7 +673,6 @@
                             return true;
                         }
 
-                        // Backtrack
                         foundTiles.pop();
                         elementsFound[newElement]--;
                         visited[newRow][newCol] = false;
@@ -531,25 +682,65 @@
             return false;
         }
 
-        // Initial call to the search function
-        const initialElements = {};
-        initialElements[startElement] = 1;
-        foundTiles.push({ r: startRow, c: startCol });
-        if (search(startRow, startCol, initialElements)) {
-            return foundTiles;
-        }
+        const startElement = grid[startRow][startCol];
+        if (!startElement) return null;
 
+        const initialElements = {};
+        if (startElement === '🎲') {
+            for (const targetElement in target) {
+                if ((initialElements[targetElement] || 0) < target[targetElement]) {
+                    initialElements[targetElement] = (initialElements[targetElement] || 0) + 1;
+                    visited[startRow][startCol] = true;
+                    foundTiles.push({ r: startRow, c: startCol });
+                    if (search(startRow, startCol, initialElements)) {
+                        return foundTiles;
+                    }
+                    foundTiles.pop();
+                    initialElements[targetElement]--;
+                    visited[startRow][startCol] = false;
+                }
+            }
+        } else if (target[startElement]) {
+            initialElements[startElement] = 1;
+            visited[startRow][startCol] = true;
+            foundTiles.push({ r: startRow, c: startCol });
+            if (search(startRow, startCol, initialElements)) {
+                return foundTiles;
+            }
+        }
+        
         return null;
     }
 
+    /**
+     * Shows a modal with custom content.
+     * @param {string} title - The title of the modal.
+     * @param {string} bodyContent - The HTML content for the modal body.
+     * @param {string} buttonText - The text for the modal button.
+     * @param {Function} buttonAction - The function to call when the button is clicked.
+     */
+    function showMessage(title, bodyContent, buttonText, buttonAction) {
+        modalTitle.textContent = title;
+        modalBody.innerHTML = bodyContent;
+        modalButton.textContent = buttonText;
+        modalButton.onclick = buttonAction;
+        gameModal.classList.add('active');
+    }
+
+    /**
+     * Hides the modal.
+     */
+    function hideModal() {
+        gameModal.classList.remove('active');
+    }
+    
     /**
      * Ends the game and displays a message.
      * @param {string} message - The message to display.
      */
     function endGame(message) {
         isGameOver = true;
-        gameOverText.textContent = message;
-        gameOverMessage.style.display = 'flex';
+        showMessage('Game Over!', message, 'Play Again', resetGame);
     }
     
     /**
@@ -564,13 +755,12 @@
      * Advances to the next level.
      */
     function winLevel() {
-        winLevelMessage.style.display = 'flex';
         currentLevel++;
         if (currentLevel > Object.keys(LEVELS).length) {
             currentLevel = 1; // Loop back to the beginning
-            gameOverText.textContent = 'You have completed all levels! Starting over.';
-            gameOverMessage.style.display = 'flex';
-            winLevelMessage.style.display = 'none';
+            showMessage('You Win!', 'You have completed all levels! Starting over.', 'Play Again', initGame);
+        } else {
+            showMessage('Level Complete!', 'Get ready for the next challenge.', 'Next Level', nextLevel);
         }
     }
     
@@ -580,11 +770,45 @@
     function nextLevel() {
         initGame();
     }
+
+    /**
+     * Shows the rules pop-up.
+     */
+    function showRules() {
+        const rulesHtml = `
+            <p><strong>Goal:</strong> Form the target molecule on the grid by dropping atoms into the columns.</p>
+            <p><strong>How to Play:</strong> Click a 'Drop' button to release an atom into that column. Atoms fall to the lowest empty spot.</p>
+            <p><strong>Forming Molecules:</strong> When you connect the correct atoms for the target molecule, they will disappear. The remaining atoms will fall to fill the empty spaces.</p>
+            <p><strong>Wildcard Tile:</strong> The purple '🎲' tile can act as any element to help you complete a molecule.</p>
+            <p><strong>Game Over:</strong> The game ends if any column fills up completely to the top.</p>
+        `;
+        showMessage('Rules', rulesHtml, 'Got it!', hideModal);
+    }
+
+    /**
+     * Shows the chemical formula pop-up for the current level.
+     */
+    function showFormula() {
+        const levelConfig = LEVELS[currentLevel] || LEVELS[1];
+        const formula = levelConfig.formula;
+        let body = `<p>The target molecule is <strong>${levelConfig.name}</strong>, with the chemical formula <strong>${formula}</strong>.</p>
+                    <p>You need to connect the following atoms:</p>
+                    <ul>`;
+        for (const element in levelConfig.target) {
+            body += `<li>${levelConfig.target[element]} x ${ELEMENTS[element].name} (${element})</li>`;
+        }
+        body += `</ul>`;
+        showMessage('Chemical Formula', body, 'OK', hideModal);
+    }
     
     // Initial call to start the game
     window.onload = function() {
         initGame();
     };
+
+    // Add event listeners for the new buttons
+    rulesButton.addEventListener('click', showRules);
+    targetMoleculeDisplay.addEventListener('click', showFormula);
 
     // Responsive canvas resizing
     window.addEventListener('resize', () => {
