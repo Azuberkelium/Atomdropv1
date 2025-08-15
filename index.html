@@ -72,6 +72,13 @@
             color: var(--secondary-color);
         }
 
+        .subtitle {
+            font-size: 1.2em;
+            margin: 5px 0 0;
+            color: var(--primary-color);
+            font-style: italic;
+        }
+
         .score-display {
             font-size: 1.5em;
             font-weight: bold;
@@ -290,6 +297,7 @@
     <div class="game-main">
         <div class="header">
             <h1>Molecule Merge</h1>
+            <p class="subtitle">by Azuberkelium</p>
             <div id="scoreDisplay" class="score-display">Score: 0</div>
         </div>
         
@@ -323,7 +331,7 @@
         const GRID_ROWS = 5;
         const GRID_COLS = 5;
         const CELL_SIZE = 80;
-        const DROP_SPEED = 5; // Pixels per frame, adjusted for faster drop
+        const DROP_SPEED = 10; // Pixels per frame, adjusted for faster drop
         const ANIMATION_DURATION = 500; // ms
 
         gameCanvas.width = GRID_COLS * CELL_SIZE;
@@ -358,26 +366,7 @@
             oscillator.stop(audioContext.currentTime + 0.1); // Play for 100ms
         }
 
-        // Available Elements with adjusted weights for more common drops
-        const weightedElements = [
-            { symbol: 'H', name: 'Hydrogen', color: 'var(--element-H)', weight: 10 },
-            { symbol: 'O', name: 'Oxygen', color: 'var(--element-O)', weight: 8 },
-            { symbol: 'C', name: 'Carbon', color: 'var(--element-C)', weight: 7 },
-            { symbol: 'N', name: 'Nitrogen', color: 'var(--element-N)', weight: 5 },
-            { symbol: 'S', name: 'Sulfur', color: 'var(--element-S)', weight: 3 },
-            { symbol: 'Cl', name: 'Chlorine', color: 'var(--element-Cl)', weight: 4 },
-            { symbol: 'Na', name: 'Sodium', color: 'var(--element-Na)', weight: 4 },
-            { symbol: 'P', name: 'Phosphorus', color: 'var(--element-P)', weight: 2 },
-            { symbol: 'K', name: 'Potassium', color: 'var(--element-K)', weight: 2 },
-            { symbol: 'Mg', name: 'Magnesium', color: 'var(--element-Mg)', weight: 1 },
-            { symbol: 'Fe', name: 'Iron', color: 'var(--element-Fe)', weight: 1 },
-            { symbol: 'Al', name: 'Aluminium', color: 'var(--element-Al)', weight: 1 },
-            { symbol: 'Si', name: 'Silicon', color: 'var(--element-Si)', weight: 1 },
-            { symbol: 'Li', name: 'Lithium', color: 'var(--element-Li)', weight: 1},
-            { symbol: 'F', name: 'Fluorine', color: 'var(--element-F)', weight: 1}
-        ];
-
-        // New list of 15 stable, common molecules with 4 or fewer total atoms
+        // List of 15 stable, common molecules with 4 or fewer total atoms
         // Ordered by points, then by name for display in the book.
         const molecules = [
             // 2-Atom Molecules (25 points)
@@ -401,6 +390,36 @@
             { name: 'Formaldehyde', formula: 'H₂CO', elements: { 'H': 2, 'C': 1, 'O': 1 }, points: 100 },
             { name: 'Hydrogen Peroxide', formula: 'H₂O₂', elements: { 'H': 2, 'O': 2 }, points: 100 }
         ];
+
+        // Get a list of all unique element symbols from the molecules array
+        const availableSymbols = new Set();
+        molecules.forEach(mol => {
+            Object.keys(mol.elements).forEach(symbol => {
+                availableSymbols.add(symbol);
+            });
+        });
+
+        // Available Elements with adjusted weights for more common drops
+        const weightedElements = [
+            { symbol: 'H', name: 'Hydrogen', color: 'var(--element-H)', weight: 10 },
+            { symbol: 'O', name: 'Oxygen', color: 'var(--element-O)', weight: 8 },
+            { symbol: 'C', name: 'Carbon', color: 'var(--element-C)', weight: 7 },
+            { symbol: 'N', name: 'Nitrogen', color: 'var(--element-N)', weight: 5 },
+            { symbol: 'S', name: 'Sulfur', color: 'var(--element-S)', weight: 3 },
+            { symbol: 'Cl', name: 'Chlorine', color: 'var(--element-Cl)', weight: 4 },
+            { symbol: 'Na', name: 'Sodium', color: 'var(--element-Na)', weight: 4 },
+            { symbol: 'P', name: 'Phosphorus', color: 'var(--element-P)', weight: 2 },
+            { symbol: 'K', name: 'Potassium', color: 'var(--element-K)', weight: 2 },
+            { symbol: 'Mg', name: 'Magnesium', color: 'var(--element-Mg)', weight: 1 },
+            { symbol: 'Fe', name: 'Iron', color: 'var(--element-Fe)', weight: 1 },
+            { symbol: 'Al', name: 'Aluminium', color: 'var(--element-Al)', weight: 1 },
+            { symbol: 'Si', name: 'Silicon', color: 'var(--element-Si)', weight: 1 },
+            { symbol: 'Li', name: 'Lithium', color: 'var(--element-Li)', weight: 1},
+            { symbol: 'F', name: 'Fluorine', color: 'var(--element-F)', weight: 1}
+        ];
+
+        // Filter the available elements to only include those in our molecule book
+        const dropElements = weightedElements.filter(el => availableSymbols.has(el.symbol));
 
         let moleculeCounts = {};
         molecules.forEach(mol => {
@@ -473,12 +492,12 @@
         }
 
         function generateNextElement() {
-            // Weighted random selection
-            const totalWeight = weightedElements.reduce((sum, el) => sum + el.weight, 0);
+            // Weighted random selection from the filtered list of elements
+            const totalWeight = dropElements.reduce((sum, el) => sum + el.weight, 0);
             let randomNum = Math.random() * totalWeight;
 
             let selectedElement = null;
-            for (const el of weightedElements) {
+            for (const el of dropElements) {
                 randomNum -= el.weight;
                 if (randomNum <= 0) {
                     selectedElement = el;
@@ -693,7 +712,7 @@
             } else {
                 isMerging = false;
                 if (isGameOver()) {
-                    showMessage('Game Over!');
+                    showMessage('Column is full! Game over.');
                     newGameBtn.textContent = 'Play Again';
                 } else {
                     generateNextElement();
@@ -807,36 +826,30 @@
         
         moleculeList.addEventListener('click', (event) => {
             clearHighlights();
-            const clickedElement = event.target.closest('.molecule-item, .element-symbol, .element-name');
+            const clickedElement = event.target.closest('.molecule-item');
             if (clickedElement) {
-                // Find the element symbol clicked
-                let elementSymbol = '';
-                if (clickedElement.classList.contains('molecule-item')) {
-                    // Clicks on the list item itself don't highlight.
-                    return;
-                } else if (clickedElement.classList.contains('element-symbol') || clickedElement.classList.contains('element-name')) {
-                    elementSymbol = clickedElement.textContent;
-                } else if (clickedElement.id && clickedElement.id.startsWith('tally-')) {
-                    // Clicks on the tally don't highlight.
-                    return;
-                }
-
-                // If an element symbol was found, highlight relevant molecules
-                if (elementSymbol) {
-                    molecules.forEach(mol => {
-                        for (const symbol in mol.elements) {
-                            if (symbol === elementSymbol) {
-                                const listItem = document.querySelector(`[data-formula="${mol.formula}"]`);
-                                if (listItem) {
-                                    listItem.classList.add('highlighted');
-                                }
-                                break;
+                const formula = clickedElement.dataset.formula;
+                const molecule = molecules.find(mol => mol.formula === formula);
+                
+                if (molecule) {
+                    const elementsInMol = Object.keys(molecule.elements);
+                    // Iterate through all molecule list items and highlight if they contain the same element
+                    document.querySelectorAll('.molecule-item').forEach(item => {
+                        const itemFormula = item.dataset.formula;
+                        const itemMolecule = molecules.find(mol => mol.formula === itemFormula);
+                        
+                        if (itemMolecule) {
+                            const itemElements = Object.keys(itemMolecule.elements);
+                            const hasCommonElement = itemElements.some(el => elementsInMol.includes(el));
+                            if (hasCommonElement) {
+                                item.classList.add('highlighted');
                             }
                         }
                     });
                 }
             }
         });
+
 
         newGameBtn.addEventListener('click', () => {
             initGame();
