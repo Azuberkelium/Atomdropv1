@@ -13,7 +13,8 @@
             --dark-bg: #2C3E50;
             --light-bg: #ECF0F1;
             --text-color: #ECF0F1;
-            /* Updated Element Colors for better clarity and uniqueness */
+            
+            /* Element Colors */
             --element-H: #B3E5FC; /* Light Sky Blue */
             --element-O: #EF5350; /* Red */
             --element-C: #263238; /* Dark Gray */
@@ -244,7 +245,7 @@
             display: none;
             z-index: 1000;
         }
-
+        
         /* Merging Animation */
         @keyframes merge-pulse {
             0% { transform: scale(1); opacity: 1; }
@@ -267,7 +268,17 @@
         .element-Si { background-color: var(--element-Si); color: #fff; }
         .element-F { background-color: var(--element-F); color: #000; }
         .element-Li { background-color: var(--element-Li); color: #000; }
+        
+        /* Highlight animation for potential merges */
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px 2px rgba(80, 227, 194, 0.5); }
+            50% { box-shadow: 0 0 10px 4px rgba(80, 227, 194, 0.8); }
+            100% { box-shadow: 0 0 5px 2px rgba(80, 227, 194, 0.5); }
+        }
 
+        .highlight-glow {
+            animation: glow 1.5s infinite alternate;
+        }
 
         @media (max-width: 768px) {
             .game-container {
@@ -327,11 +338,11 @@
         const newGameBtn = document.getElementById('newGameBtn');
         const soundBtn = document.getElementById('soundBtn');
         const messageBox = document.getElementById('messageBox');
-
+        
         const GRID_ROWS = 5;
         const GRID_COLS = 5;
         const CELL_SIZE = 80;
-        const DROP_SPEED = 10; // Pixels per frame, adjusted for faster drop
+        const DROP_SPEED = 10; // Pixels per frame
         const ANIMATION_DURATION = 500; // ms
 
         gameCanvas.width = GRID_COLS * CELL_SIZE;
@@ -347,25 +358,20 @@
         let isMerging = false;
         let soundOn = true;
         let animatingElements = []; // New array to manage animations
+        let highlightedGroups = []; // Array to store coordinates of highlighted merge groups
 
-        // Web Audio API for simple sound
+        // Web Audio API for simple sound effects
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        let oscillator = null;
-
-        function playSound() {
+        function playSound(frequency, duration = 0.1, type = 'sine') {
             if (!soundOn) return;
-            if (oscillator) {
-                oscillator.stop();
-                oscillator.disconnect();
-            }
-            oscillator = audioContext.createOscillator();
-            oscillator.type = 'sine';
-            oscillator.frequency.value = 440; // A4 note
+            const oscillator = audioContext.createOscillator();
+            oscillator.type = type;
+            oscillator.frequency.value = frequency;
             oscillator.connect(audioContext.destination);
             oscillator.start();
-            oscillator.stop(audioContext.currentTime + 0.1); // Play for 100ms
+            oscillator.stop(audioContext.currentTime + duration);
         }
-
+        
         // List of 15 stable, common molecules with 4 or fewer total atoms
         // Ordered by points, then by name for display in the book.
         const molecules = [
@@ -399,31 +405,34 @@
             });
         });
 
-        // Available Elements with adjusted weights for more common drops
-        const weightedElements = [
-            { symbol: 'H', name: 'Hydrogen', color: 'var(--element-H)', weight: 10 },
-            { symbol: 'O', name: 'Oxygen', color: 'var(--element-O)', weight: 8 },
-            { symbol: 'C', name: 'Carbon', color: 'var(--element-C)', weight: 7 },
-            { symbol: 'N', name: 'Nitrogen', color: 'var(--element-N)', weight: 5 },
-            { symbol: 'S', name: 'Sulfur', color: 'var(--element-S)', weight: 3 },
-            { symbol: 'Cl', name: 'Chlorine', color: 'var(--element-Cl)', weight: 4 },
-            { symbol: 'Na', name: 'Sodium', color: 'var(--element-Na)', weight: 4 },
-            { symbol: 'P', name: 'Phosphorus', color: 'var(--element-P)', weight: 2 },
-            { symbol: 'K', name: 'Potassium', color: 'var(--element-K)', weight: 2 },
+        const dropElements = [
+            { symbol: 'H', name: 'Hydrogen', color: 'var(--element-H)', weight: 4 },
+            { symbol: 'O', name: 'Oxygen', color: 'var(--element-O)', weight: 3 },
+            { symbol: 'C', name: 'Carbon', color: 'var(--element-C)', weight: 2 },
+            { symbol: 'N', name: 'Nitrogen', color: 'var(--element-N)', weight: 2 },
+            { symbol: 'Cl', name: 'Chlorine', color: 'var(--element-Cl)', weight: 2 },
+            { symbol: 'Na', name: 'Sodium', color: 'var(--element-Na)', weight: 2 },
+            { symbol: 'S', name: 'Sulfur', color: 'var(--element-S)', weight: 1 },
+            { symbol: 'P', name: 'Phosphorus', color: 'var(--element-P)', weight: 1 },
+            { symbol: 'K', name: 'Potassium', color: 'var(--element-K)', weight: 1 },
             { symbol: 'Mg', name: 'Magnesium', color: 'var(--element-Mg)', weight: 1 },
             { symbol: 'Fe', name: 'Iron', color: 'var(--element-Fe)', weight: 1 },
             { symbol: 'Al', name: 'Aluminium', color: 'var(--element-Al)', weight: 1 },
             { symbol: 'Si', name: 'Silicon', color: 'var(--element-Si)', weight: 1 },
-            { symbol: 'Li', name: 'Lithium', color: 'var(--element-Li)', weight: 1},
-            { symbol: 'F', name: 'Fluorine', color: 'var(--element-F)', weight: 1}
-        ];
-
-        // Filter the available elements to only include those in our molecule book
-        const dropElements = weightedElements.filter(el => availableSymbols.has(el.symbol));
+            { symbol: 'Li', name: 'Lithium', color: 'var(--element-Li)', weight: 1 },
+            { symbol: 'F', name: 'Fluorine', color: 'var(--element-F)', weight: 1 },
+        ].filter(el => availableSymbols.has(el.symbol));
 
         let moleculeCounts = {};
         molecules.forEach(mol => {
             moleculeCounts[mol.formula] = 0;
+        });
+
+        // Sort molecules by atom count descending for priority in merging
+        const sortedMolecules = [...molecules].sort((a, b) => {
+            const atomCountA = Object.values(a.elements).reduce((sum, val) => sum + val, 0);
+            const atomCountB = Object.values(b.elements).reduce((sum, val) => sum + val, 0);
+            return atomCountB - atomCountA;
         });
 
         // --- Game Functions ---
@@ -438,6 +447,7 @@
             activeElement = null;
             nextElement = null;
             animatingElements = [];
+            highlightedGroups = [];
             
             molecules.forEach(mol => {
                 moleculeCounts[mol.formula] = 0;
@@ -445,13 +455,12 @@
             updateMoleculeBook();
 
             generateNextElement();
-            requestAnimationFrame(draw);
         }
 
         function updateMoleculeBook() {
             moleculeList.innerHTML = '';
             
-            const sortedMolecules = [...molecules].sort((a, b) => {
+            const displayMolecules = [...molecules].sort((a, b) => {
                 if (a.points !== b.points) {
                     return a.points - b.points;
                 }
@@ -459,9 +468,8 @@
             });
 
             let currentPoints = null;
-            let ul = document.createElement('ul');
 
-            sortedMolecules.forEach(mol => {
+            displayMolecules.forEach(mol => {
                 if (mol.points !== currentPoints) {
                     currentPoints = mol.points;
                     const h3 = document.createElement('h3');
@@ -504,7 +512,7 @@
                     break;
                 }
             }
-
+            
             nextElement = { ...selectedElement, y: 0 };
             if (!activeElement) {
                 activeElement = nextElement;
@@ -535,6 +543,13 @@
                 }
             }
 
+            // Draw highlighted groups
+            highlightedGroups.forEach(group => {
+                group.forEach(pos => {
+                    drawHighlight(gameCtx, pos.c * CELL_SIZE, pos.r * CELL_SIZE, CELL_SIZE);
+                });
+            });
+            
             // Draw active element falling from the top
             if (isDropping && activeElement) {
                 const x = dropColumn * CELL_SIZE;
@@ -597,6 +612,18 @@
             ctx.fillText(symbol, x + size / 2, y + size / 2);
         }
         
+        function drawHighlight(ctx, x, y, size) {
+            ctx.save();
+            ctx.strokeStyle = '#50E3C2'; // secondary-color for the glow
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#50E3C2';
+            ctx.beginPath();
+            ctx.arc(x + size / 2, y + size / 2, size / 2 - 2, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         function getContrastYIQ(hexcolor) {
             if (hexcolor.startsWith('var(')) {
                 hexcolor = getComputedStyle(document.documentElement).getPropertyValue(hexcolor.match(/--[\w-]+/)[0]).trim();
@@ -610,6 +637,8 @@
 
         function dropElement(col) {
             if (isDropping || isMerging) return;
+            // Clear any old highlights before a new drop
+            highlightedGroups = []; 
             if (grid[0][col] !== null) {
                 showMessage('Column is full! Game over.');
                 return;
@@ -628,11 +657,12 @@
                     isDropping = false;
                     const row = findDropRow(col);
                     grid[row][col] = activeElement;
+
                     activeElement = null;
-                    
                     setTimeout(() => {
                         checkMerges();
                     }, 100);
+                    
                 } else {
                     requestAnimationFrame(animateDrop);
                 }
@@ -653,53 +683,40 @@
             isMerging = true;
             let mergedThisTurn = false;
             
-            let allFoundGroups = [];
             const visited = new Set();
             
             for (let r = 0; r < GRID_ROWS; r++) {
                 for (let c = 0; c < GRID_COLS; c++) {
                     if (grid[r][c] && !visited.has(`${r},${c}`)) {
                         const group = findConnectedGroup(r, c);
-                        allFoundGroups.push(group);
                         group.forEach(pos => visited.add(`${pos.r},${pos.c}`));
-                    }
-                }
-            }
+                        
+                        let groupElements = group.reduce((counts, pos) => {
+                            const symbol = grid[pos.r][pos.c].symbol;
+                            counts[symbol] = (counts[symbol] || 0) + 1;
+                            return counts;
+                        }, {});
 
-            // Check if any group matches a molecule
-            for (const group of allFoundGroups) {
-                const elementsInGroup = group.reduce((counts, pos) => {
-                    const symbol = grid[pos.r][pos.c].symbol;
-                    counts[symbol] = (counts[symbol] || 0) + 1;
-                    return counts;
-                }, {});
-
-                for (const mol of molecules) {
-                    const molElements = mol.elements;
-                    let match = true;
-                    // Check if group elements match molecule elements and count
-                    for (const symbol in molElements) {
-                        if (elementsInGroup[symbol] !== molElements[symbol]) {
-                            match = false;
-                            break;
-                        }
-                    }
-                    // Check for extra elements in the group
-                    for (const symbol in elementsInGroup) {
-                        if (elementsInGroup[symbol] !== molElements[symbol]) {
-                            match = false;
-                            break;
-                        }
-                    }
-
-                    if (match) {
-                        // Check total number of atoms
-                        const totalAtomsInMol = Object.values(mol.elements).reduce((sum, val) => sum + val, 0);
-                        const totalAtomsInGroup = Object.values(elementsInGroup).reduce((sum, val) => sum + val, 0);
-                        if (totalAtomsInGroup === totalAtomsInMol) {
-                            mergeElements(group, mol);
-                            mergedThisTurn = true;
-                            break;
+                        // Check for merges starting with the largest molecules
+                        for (const mol of sortedMolecules) {
+                            let match = true;
+                            let atomsToConsume = {};
+                            
+                            // Check if the group has enough elements to form this molecule
+                            for (const symbol in mol.elements) {
+                                if (groupElements[symbol] === undefined || groupElements[symbol] < mol.elements[symbol]) {
+                                    match = false;
+                                    break;
+                                }
+                                atomsToConsume[symbol] = mol.elements[symbol];
+                            }
+                            
+                            if (match) {
+                                // We found a match, so perform the merge
+                                mergeElements(group, atomsToConsume, mol);
+                                mergedThisTurn = true;
+                                break; // Stop after the first (largest) molecule match
+                            }
                         }
                     }
                 }
@@ -707,8 +724,8 @@
             
             if (mergedThisTurn) {
                 setTimeout(() => {
-                    checkMerges();
-                }, ANIMATION_DURATION + 100); // Re-check after animation
+                    checkMerges(); // Re-check after animation
+                }, ANIMATION_DURATION + 100);
             } else {
                 isMerging = false;
                 if (isGameOver()) {
@@ -749,34 +766,72 @@
             return group;
         }
 
-        function mergeElements(group, molecule) {
+        function mergeElements(group, atomsToConsume, molecule) {
             showMessage(`Merged: ${molecule.formula} (${molecule.name})! +${molecule.points}`);
             updateScore(molecule.points);
             updateTally(molecule.formula);
-            playSound();
+            playSound(440);
             
-            // New animation logic: add elements to a separate animation array
             const centerR = group.reduce((sum, p) => sum + p.r, 0) / group.length;
             const centerC = group.reduce((sum, p) => sum + p.c, 0) / group.length;
             
+            const elementsToRemove = [];
+            const remainingElements = [];
+
+            // Identify which elements to remove and which to keep
+            const tempGrid = JSON.parse(JSON.stringify(grid));
+            const consumedSymbols = { ...atomsToConsume };
+
             for (const pos of group) {
-                const element = grid[pos.r][pos.c];
-                if (element) {
-                    const startX = pos.c * CELL_SIZE;
-                    const startY = pos.r * CELL_SIZE;
-                    const endX = centerC * CELL_SIZE;
-                    const endY = centerR * CELL_SIZE;
-                    
-                    animatingElements.push({
-                        ...element,
-                        startX: startX,
-                        startY: startY,
-                        endX: endX,
-                        endY: endY,
-                        startTime: Date.now()
-                    });
+                const element = tempGrid[pos.r][pos.c];
+                if (element && consumedSymbols[element.symbol] > 0) {
+                    elementsToRemove.push(pos);
+                    consumedSymbols[element.symbol]--;
+                } else {
+                    remainingElements.push(pos);
                 }
+            }
+            
+            // Animate and remove the elements that form the molecule
+            elementsToRemove.forEach(pos => {
+                const element = grid[pos.r][pos.c];
+                animatingElements.push({
+                    ...element,
+                    startX: pos.c * CELL_SIZE,
+                    startY: pos.r * CELL_SIZE,
+                    endX: centerC * CELL_SIZE,
+                    endY: centerR * CELL_SIZE,
+                    startTime: Date.now()
+                });
                 grid[pos.r][pos.c] = null;
+            });
+
+            // Re-apply the remaining elements to the grid
+            const newGrid = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(null));
+            remainingElements.forEach(pos => {
+                newGrid[pos.r][pos.c] = grid[pos.r][pos.c];
+                grid[pos.r][pos.c] = null;
+            });
+            
+            // Gravity effect for remaining elements
+            for (let c = 0; c < GRID_COLS; c++) {
+                let emptyRow = GRID_ROWS - 1;
+                for (let r = GRID_ROWS - 1; r >= 0; r--) {
+                    if (newGrid[r][c] !== null) {
+                        grid[emptyRow][c] = newGrid[r][c];
+                        if (emptyRow !== r) {
+                            animatingElements.push({
+                                ...grid[emptyRow][c],
+                                startX: c * CELL_SIZE,
+                                startY: r * CELL_SIZE,
+                                endX: c * CELL_SIZE,
+                                endY: emptyRow * CELL_SIZE,
+                                startTime: Date.now()
+                            });
+                        }
+                        emptyRow--;
+                    }
+                }
             }
         }
 
@@ -806,8 +861,9 @@
             document.querySelectorAll('.molecule-item').forEach(item => {
                 item.classList.remove('highlighted');
             });
+            highlightedGroups = [];
         }
-        
+
         // --- Event Listeners ---
         gameCanvas.addEventListener('click', (event) => {
             if (isDropping || isMerging || isGameOver()) return;
@@ -820,7 +876,6 @@
                 activeElement = nextElement;
                 nextElement = null; // Clear next element for a fresh one
                 dropElement(col);
-                generateNextElement();
             }
         });
         
@@ -832,24 +887,51 @@
                 const molecule = molecules.find(mol => mol.formula === formula);
                 
                 if (molecule) {
-                    const elementsInMol = Object.keys(molecule.elements);
-                    // Iterate through all molecule list items and highlight if they contain the same element
-                    document.querySelectorAll('.molecule-item').forEach(item => {
-                        const itemFormula = item.dataset.formula;
-                        const itemMolecule = molecules.find(mol => mol.formula === itemFormula);
-                        
-                        if (itemMolecule) {
-                            const itemElements = Object.keys(itemMolecule.elements);
-                            const hasCommonElement = itemElements.some(el => elementsInMol.includes(el));
-                            if (hasCommonElement) {
-                                item.classList.add('highlighted');
+                    const allGroups = [];
+                    const visited = new Set();
+                    for (let r = 0; r < GRID_ROWS; r++) {
+                        for (let c = 0; c < GRID_COLS; c++) {
+                            if (grid[r][c] && !visited.has(`${r},${c}`)) {
+                                const group = findConnectedGroup(r, c);
+                                allGroups.push(group);
+                                group.forEach(pos => visited.add(`${pos.r},${pos.c}`));
                             }
                         }
-                    });
+                    }
+
+                    // Check if any found group can form the clicked molecule's formula
+                    for (const group of allGroups) {
+                        const elementsInGroup = group.reduce((counts, pos) => {
+                            const symbol = grid[pos.r][pos.c].symbol;
+                            counts[symbol] = (counts[symbol] || 0) + 1;
+                            return counts;
+                        }, {});
+
+                        let match = true;
+                        for (const symbol in molecule.elements) {
+                            if (elementsInGroup[symbol] === undefined || elementsInGroup[symbol] < molecule.elements[symbol]) {
+                                match = false;
+                                break;
+                            }
+                        }
+
+                        if (match) {
+                            const elementsToHighlight = [];
+                            const consumed = { ...molecule.elements };
+                            for(const pos of group) {
+                                if(consumed[grid[pos.r][pos.c].symbol] > 0) {
+                                    elementsToHighlight.push(pos);
+                                    consumed[grid[pos.r][pos.c].symbol]--;
+                                }
+                            }
+                            highlightedGroups.push(elementsToHighlight);
+                        }
+                    }
+                    
+                    clickedElement.classList.add('highlighted');
                 }
             }
         });
-
 
         newGameBtn.addEventListener('click', () => {
             initGame();
@@ -864,6 +946,7 @@
 
         // Start the game
         initGame();
+        requestAnimationFrame(draw);
     });
 </script>
 
