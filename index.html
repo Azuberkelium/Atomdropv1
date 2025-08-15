@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Molecule Merge by Azuberkelium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --secondary-color: #50E3C2;
+            --dark-bg: #2C3E50;
+            --light-bg: #ECF0F1;
+            --text-color: #ECF0F1;
+            /* Updated Element Colors for better clarity and uniqueness */
+            --element-H: #B3E5FC; /* Light Sky Blue */
+            --element-O: #EF5350; /* Red */
+            --element-C: #263238; /* Dark Gray */
+            --element-N: #673AB7; /* Deep Purple */
+            --element-Na: #FFB74D; /* Light Orange */
+            --element-Cl: #8BC34A; /* Green */
+            --element-S: #FFEB3B; /* Yellow */
+            --element-P: #FF5722; /* Deep Orange */
+            --element-K: #E91E63; /* Pink Magenta */
+            --element-Mg: #CDDC39; /* Lime Green */
+            --element-Fe: #D32F2F; /* Rusty Red */
+            --element-Al: #BDBDBD; /* Silver Gray */
+            --element-Si: #9E9E9E; /* Medium Gray */
+            --element-F: #90CAF9; /* Light Blue */
+            --element-Li: #FFCCBC; /* Light Peach */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            border-radius: 15px;
+            background-color: #34495E;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .game-main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: var(--secondary-color);
+        }
+
+        .score-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 10px 0;
+            color: var(--primary-color);
+        }
+
+        #gameCanvas {
+            border: 5px solid #2C3E50;
+            border-radius: 10px;
+            background-color: #ECF0F1;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+        
+        #nextElementCanvas {
+            width: 80px;
+            height: 80px;
+            border: 5px solid #2C3E50;
+            border-radius: 10px;
+            background-color: #ECF0F1;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        button#newGameBtn {
+            background-color: var(--secondary-color);
+            color: var(--dark-bg);
+        }
+
+        button#newGameBtn:hover {
+            background-color: #40C2A7;
+            transform: translateY(-2px);
+        }
+
+        #soundBtn {
+            width: 45px;
+            height: 45px;
+            background-color: #8E44AD;
+            color: var(--text-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #soundBtn:hover {
+            background-color: #9B59B6;
+        }
+
+        .molecule-book {
+            width: 300px;
+            background-color: #2C3E50;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+
+        .molecule-book h2 {
+            margin-top: 0;
+            font-size: 1.5em;
+            color: var(--secondary-color);
+            text-align: center;
+        }
+        
+        .molecule-book h3 {
+            margin-top: 20px;
+            margin-bottom: 5px;
+            font-size: 1.2em;
+            color: var(--primary-color);
+        }
+        
+        .molecule-book h3:first-of-type {
+            margin-top: 0;
+        }
+
+        .molecule-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .molecule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #34495E;
+            transition: background-color 0.2s;
+            position: relative;
+        }
+        
+        .molecule-item.highlighted {
+            background-color: rgba(80, 227, 194, 0.2); /* Semi-transparent highlight */
+        }
+
+        .molecule-item:last-child {
+            border-bottom: none;
+        }
+
+        .molecule-item:hover {
+            background-color: #34495E;
+        }
+
+        .molecule-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .molecule-name {
+            font-weight: bold;
+        }
+
+        .molecule-symbol {
+            font-style: italic;
+            font-weight: normal;
+        }
+        
+        .tally {
+            background-color: #2C3E50;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(44, 62, 80, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        /* Merging Animation */
+        @keyframes merge-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .element-H { background-color: var(--element-H); color: #000; }
+        .element-O { background-color: var(--element-O); color: #fff; }
+        .element-C { background-color: var(--element-C); color: #fff; }
+        .element-N { background-color: var(--element-N); color: #fff; }
+        .element-Na { background-color: var(--element-Na); color: #fff; }
+        .element-Cl { background-color: var(--element-Cl); color: #fff; }
+        .element-S { background-color: var(--element-S); color: #000; }
+        .element-P { background-color: var(--element-P); color: #fff; }
+        .element-K { background-color: var(--element-K); color: #fff; }
+        .element-Mg { background-color: var(--element-Mg); color: #fff; }
+        .element-Fe { background-color: var(--element-Fe); color: #fff; }
+        .element-Al { background-color: var(--element-Al); color: #fff; }
+        .element-Si { background-color: var(--element-Si); color: #fff; }
+        .element-F { background-color: var(--element-F); color: #000; }
+        .element-Li { background-color: var(--element-Li); color: #000; }
+
+
+        @media (max-width: 768px) {
+            .game-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .molecule-book {
+                width: 100%;
+                max-height: 40vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <!-- Molecule Book -->
+    <div class="molecule-book">
+        <h2>Molecule Book</h2>
+        <ul id="moleculeList" class="molecule-list">
+            <!-- Molecules will be dynamically added here -->
+        </ul>
+    </div>
+
+    <!-- Game Main Area -->
+    <div class="game-main">
+        <div class="header">
+            <h1>Molecule Merge</h1>
+            <div id="scoreDisplay" class="score-display">Score: 0</div>
+        </div>
+        
+        <label for="nextElementCanvas" style="font-size:1.2em; font-weight:bold; margin-bottom: 5px;">Next:</label>
+        <canvas id="nextElementCanvas" width="80" height="80"></canvas>
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="controls">
+            <button id="newGameBtn">New Game</button>
+            <button id="soundBtn"><i class="fas fa-volume-up"></i></button>
+        </div>
+    </div>
+</div>
+
+<div id="messageBox" class="message-box"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- Game Setup ---
+        const gameCanvas = document.getElementById('gameCanvas');
+        const gameCtx = gameCanvas.getContext('2d');
+        const nextElementCanvas = document.getElementById('nextElementCanvas');
+        const nextElementCtx = nextElementCanvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const moleculeList = document.getElementById('moleculeList');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const soundBtn = document.getElementById('soundBtn');
+        const messageBox = document.getElementById('messageBox');
+
+        const GRID_ROWS = 5;
+        const GRID_COLS = 5;
+        const CELL_SIZE = 80;
+        const DROP_SPEED = 5; // Pixels per frame, adjusted for faster drop
+        const ANIMATION_DURATION = 500; // ms
+
+        gameCanvas.width = GRID_COLS * CELL_SIZE;
+        gameCanvas.height = GRID_ROWS * CELL_SIZE;
+
+        let grid = [];
+        let score = 0;
+        let activeElement = null;
+        let nextElement = null;
+        let dropColumn = -1;
+        let dropY = 0;
+        let isDropping = false;
+        let isMerging = false;
+        let soundOn = true;
+        let animatingElements = []; // New array to manage animations
+
+        // Web Audio API for simple sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let oscillator = null;
+
+        function playSound() {
+            if (!soundOn) return;
+            if (oscillator) {
+                oscillator.stop();
+                oscillator.disconnect();
+            }
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 440; // A4 note
+            oscillator.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1); // Play for 100ms
+        }
+
+        // Available Elements with adjusted weights for more common drops
+        const weightedElements = [
+            { symbol: 'H', name: 'Hydrogen', color: 'var(--element-H)', weight: 10 },
+            { symbol: 'O', name: 'Oxygen', color: 'var(--element-O)', weight: 8 },
+            { symbol: 'C', name: 'Carbon', color: 'var(--element-C)', weight: 7 },
+            { symbol: 'N', name: 'Nitrogen', color: 'var(--element-N)', weight: 5 },
+            { symbol: 'S', name: 'Sulfur', color: 'var(--element-S)', weight: 3 },
+            { symbol: 'Cl', name: 'Chlorine', color: 'var(--element-Cl)', weight: 4 },
+            { symbol: 'Na', name: 'Sodium', color: 'var(--element-Na)', weight: 4 },
+            { symbol: 'P', name: 'Phosphorus', color: 'var(--element-P)', weight: 2 },
+            { symbol: 'K', name: 'Potassium', color: 'var(--element-K)', weight: 2 },
+            { symbol: 'Mg', name: 'Magnesium', color: 'var(--element-Mg)', weight: 1 },
+            { symbol: 'Fe', name: 'Iron', color: 'var(--element-Fe)', weight: 1 },
+            { symbol: 'Al', name: 'Aluminium', color: 'var(--element-Al)', weight: 1 },
+            { symbol: 'Si', name: 'Silicon', color: 'var(--element-Si)', weight: 1 },
+            { symbol: 'Li', name: 'Lithium', color: 'var(--element-Li)', weight: 1},
+            { symbol: 'F', name: 'Fluorine', color: 'var(--element-F)', weight: 1}
+        ];
+
+        // New list of 15 stable, common molecules with 4 or fewer total atoms
+        // Ordered by points, then by name for display in the book.
+        const molecules = [
+            // 2-Atom Molecules (25 points)
+            { name: 'Carbon Monoxide', formula: 'CO', elements: { 'C': 1, 'O': 1 }, points: 25 },
+            { name: 'Ferrous Chloride', formula: 'FeCl', elements: { 'Fe': 1, 'Cl': 1 }, points: 25 },
+            { name: 'Hydrogen Fluoride', formula: 'HF', elements: { 'H': 1, 'F': 1 }, points: 25 },
+            { name: 'Lithium Fluoride', formula: 'LiF', elements: { 'Li': 1, 'F': 1 }, points: 25 },
+            { name: 'Sodium Chloride', formula: 'NaCl', elements: { 'Na': 1, 'Cl': 1 }, points: 25 },
+
+            // 3-Atom Molecules (50 points)
+            { name: 'Carbon Dioxide', formula: 'CO₂', elements: { 'C': 1, 'O': 2 }, points: 50 },
+            { name: 'Hydrogen Cyanide', formula: 'HCN', elements: { 'H': 1, 'C': 1, 'N': 1 }, points: 50 },
+            { name: 'Hydrogen Sulfide', formula: 'H₂S', elements: { 'H': 2, 'S': 1 }, points: 50 },
+            { name: 'Sodium Hydroxide', formula: 'NaOH', elements: { 'Na': 1, 'O': 1, 'H': 1 }, points: 50 },
+            { name: 'Sulfur Dioxide', formula: 'SO₂', elements: { 'S': 1, 'O': 2 }, points: 50 },
+            { name: 'Water', formula: 'H₂O', elements: { 'H': 2, 'O': 1 }, points: 50 },
+
+            // 4-Atom Molecules (100 points)
+            { name: 'Acetylene', formula: 'C₂H₂', elements: { 'C': 2, 'H': 2 }, points: 100 },
+            { name: 'Ammonia', formula: 'NH₃', elements: { 'N': 1, 'H': 3 }, points: 100 },
+            { name: 'Formaldehyde', formula: 'H₂CO', elements: { 'H': 2, 'C': 1, 'O': 1 }, points: 100 },
+            { name: 'Hydrogen Peroxide', formula: 'H₂O₂', elements: { 'H': 2, 'O': 2 }, points: 100 }
+        ];
+
+        let moleculeCounts = {};
+        molecules.forEach(mol => {
+            moleculeCounts[mol.formula] = 0;
+        });
+
+        // --- Game Functions ---
+        function initGame() {
+            grid = Array.from({ length: GRID_ROWS }, () =>
+                Array.from({ length: GRID_COLS }, () => null)
+            );
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            isDropping = false;
+            isMerging = false;
+            activeElement = null;
+            nextElement = null;
+            animatingElements = [];
+            
+            molecules.forEach(mol => {
+                moleculeCounts[mol.formula] = 0;
+            });
+            updateMoleculeBook();
+
+            generateNextElement();
+            requestAnimationFrame(draw);
+        }
+
+        function updateMoleculeBook() {
+            moleculeList.innerHTML = '';
+            
+            const sortedMolecules = [...molecules].sort((a, b) => {
+                if (a.points !== b.points) {
+                    return a.points - b.points;
+                }
+                return a.name.localeCompare(b.name);
+            });
+
+            let currentPoints = null;
+            let ul = document.createElement('ul');
+
+            sortedMolecules.forEach(mol => {
+                if (mol.points !== currentPoints) {
+                    currentPoints = mol.points;
+                    const h3 = document.createElement('h3');
+                    h3.textContent = `${mol.points} Points`;
+                    moleculeList.appendChild(h3);
+                }
+
+                const li = document.createElement('li');
+                li.className = 'molecule-item';
+                li.dataset.formula = mol.formula;
+                li.innerHTML = `
+                    <div class="molecule-info">
+                        <span class="molecule-name">${mol.name}</span>
+                        <span class="molecule-symbol">${mol.formula}</span>
+                    </div>
+                    <div class="tally" id="tally-${mol.formula}">${moleculeCounts[mol.formula]}</div>
+                `;
+                moleculeList.appendChild(li);
+            });
+        }
+        
+        function updateTally(formula) {
+            moleculeCounts[formula]++;
+            const tallyElement = document.getElementById(`tally-${formula}`);
+            if (tallyElement) {
+                tallyElement.textContent = moleculeCounts[formula];
+            }
+        }
+
+        function generateNextElement() {
+            // Weighted random selection
+            const totalWeight = weightedElements.reduce((sum, el) => sum + el.weight, 0);
+            let randomNum = Math.random() * totalWeight;
+
+            let selectedElement = null;
+            for (const el of weightedElements) {
+                randomNum -= el.weight;
+                if (randomNum <= 0) {
+                    selectedElement = el;
+                    break;
+                }
+            }
+
+            nextElement = { ...selectedElement, y: 0 };
+            if (!activeElement) {
+                activeElement = nextElement;
+                generateNextElement();
+            }
+        }
+
+        function draw() {
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            
+            drawNextElement();
+
+            // Draw grid
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    gameCtx.strokeStyle = '#BDC3C7';
+                    gameCtx.strokeRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                }
+            }
+
+            // Draw elements in the grid
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const element = grid[r][c];
+                    if (element) {
+                        drawElement(gameCtx, element.symbol, element.color, c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+
+            // Draw active element falling from the top
+            if (isDropping && activeElement) {
+                const x = dropColumn * CELL_SIZE;
+                drawElement(gameCtx, activeElement.symbol, activeElement.color, x, dropY, CELL_SIZE);
+            }
+
+            // Draw animating elements
+            const now = Date.now();
+            animatingElements = animatingElements.filter(anim => {
+                const progress = Math.min((now - anim.startTime) / ANIMATION_DURATION, 1);
+                
+                const currentX = anim.startX + (anim.endX - anim.startX) * progress;
+                const currentY = anim.startY + (anim.endY - anim.startY) * progress;
+                const currentOpacity = 1 - progress;
+
+                gameCtx.save();
+                gameCtx.globalAlpha = currentOpacity;
+                drawElement(gameCtx, anim.symbol, anim.color, currentX, currentY, CELL_SIZE);
+                gameCtx.restore();
+
+                return progress < 1; // Keep animating if not finished
+            });
+            
+            requestAnimationFrame(draw);
+        }
+        
+        function drawNextElement() {
+            nextElementCtx.clearRect(0, 0, nextElementCanvas.width, nextElementCanvas.height);
+            if (nextElement) {
+                const drawSize = nextElementCanvas.width;
+                drawElement(nextElementCtx, nextElement.symbol, nextElement.color, 0, 0, drawSize);
+            }
+        }
+
+        /**
+         * Resolves a CSS variable string to its corresponding hex color value.
+         * @param {string} varName The name of the CSS variable, e.g., 'var(--element-H)'.
+         * @returns {string} The resolved hex color string, e.g., '#B3E5FC'.
+         */
+        function resolveCssVar(varName) {
+            if (varName.startsWith('var(')) {
+                return getComputedStyle(document.documentElement).getPropertyValue(varName.match(/--[\w-]+/)[0]).trim();
+            }
+            return varName;
+        }
+
+        function drawElement(ctx, symbol, color, x, y, size) {
+            // Resolve the color from the CSS variable before using it with Canvas
+            const resolvedColor = resolveCssVar(color);
+            ctx.beginPath();
+            ctx.arc(x + size / 2, y + size / 2, size / 2 - 5, 0, 2 * Math.PI);
+            ctx.fillStyle = resolvedColor;
+            ctx.fill();
+            ctx.closePath();
+            
+            ctx.fillStyle = getContrastYIQ(color);
+            ctx.font = '24px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x + size / 2, y + size / 2);
+        }
+        
+        function getContrastYIQ(hexcolor) {
+            if (hexcolor.startsWith('var(')) {
+                hexcolor = getComputedStyle(document.documentElement).getPropertyValue(hexcolor.match(/--[\w-]+/)[0]).trim();
+            }
+            const r = parseInt(hexcolor.substr(1, 2), 16);
+            const g = parseInt(hexcolor.substr(3, 2), 16);
+            const b = parseInt(hexcolor.substr(5, 2), 16);
+            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return (yiq >= 128) ? 'black' : 'white';
+        }
+
+        function dropElement(col) {
+            if (isDropping || isMerging) return;
+            if (grid[0][col] !== null) {
+                showMessage('Column is full! Game over.');
+                return;
+            }
+
+            isDropping = true;
+            dropColumn = col;
+            dropY = -CELL_SIZE;
+            
+            function animateDrop() {
+                if (!isDropping) return;
+                dropY += DROP_SPEED;
+                const targetY = findDropRow(col) * CELL_SIZE;
+
+                if (dropY >= targetY) {
+                    isDropping = false;
+                    const row = findDropRow(col);
+                    grid[row][col] = activeElement;
+                    activeElement = null;
+                    
+                    setTimeout(() => {
+                        checkMerges();
+                    }, 100);
+                } else {
+                    requestAnimationFrame(animateDrop);
+                }
+            }
+            requestAnimationFrame(animateDrop);
+        }
+        
+        function findDropRow(col) {
+            for (let r = GRID_ROWS - 1; r >= 0; r--) {
+                if (grid[r][col] === null) {
+                    return r;
+                }
+            }
+            return -1; // Should not happen if check is done
+        }
+
+        function checkMerges() {
+            isMerging = true;
+            let mergedThisTurn = false;
+            
+            let allFoundGroups = [];
+            const visited = new Set();
+            
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    if (grid[r][c] && !visited.has(`${r},${c}`)) {
+                        const group = findConnectedGroup(r, c);
+                        allFoundGroups.push(group);
+                        group.forEach(pos => visited.add(`${pos.r},${pos.c}`));
+                    }
+                }
+            }
+
+            // Check if any group matches a molecule
+            for (const group of allFoundGroups) {
+                const elementsInGroup = group.reduce((counts, pos) => {
+                    const symbol = grid[pos.r][pos.c].symbol;
+                    counts[symbol] = (counts[symbol] || 0) + 1;
+                    return counts;
+                }, {});
+
+                for (const mol of molecules) {
+                    const molElements = mol.elements;
+                    let match = true;
+                    // Check if group elements match molecule elements and count
+                    for (const symbol in molElements) {
+                        if (elementsInGroup[symbol] !== molElements[symbol]) {
+                            match = false;
+                            break;
+                        }
+                    }
+                    // Check for extra elements in the group
+                    for (const symbol in elementsInGroup) {
+                        if (elementsInGroup[symbol] !== molElements[symbol]) {
+                            match = false;
+                            break;
+                        }
+                    }
+
+                    if (match) {
+                        // Check total number of atoms
+                        const totalAtomsInMol = Object.values(mol.elements).reduce((sum, val) => sum + val, 0);
+                        const totalAtomsInGroup = Object.values(elementsInGroup).reduce((sum, val) => sum + val, 0);
+                        if (totalAtomsInGroup === totalAtomsInMol) {
+                            mergeElements(group, mol);
+                            mergedThisTurn = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (mergedThisTurn) {
+                setTimeout(() => {
+                    checkMerges();
+                }, ANIMATION_DURATION + 100); // Re-check after animation
+            } else {
+                isMerging = false;
+                if (isGameOver()) {
+                    showMessage('Game Over!');
+                    newGameBtn.textContent = 'Play Again';
+                } else {
+                    generateNextElement();
+                }
+            }
+        }
+
+        function findConnectedGroup(startR, startC) {
+            const group = [];
+            const queue = [{ r: startR, c: startC }];
+            const visited = new Set();
+            visited.add(`${startR},${startC}`);
+
+            while (queue.length > 0) {
+                const { r, c } = queue.shift();
+                group.push({ r, c });
+
+                const neighbors = [
+                    { r: r - 1, c: c },
+                    { r: r + 1, c: c },
+                    { r: r, c: c - 1 },
+                    { r: r, c: c + 1 },
+                ];
+
+                for (const neighbor of neighbors) {
+                    const { r: nextR, c: nextC } = neighbor;
+                    if (nextR >= 0 && nextR < GRID_ROWS && nextC >= 0 && nextC < GRID_COLS &&
+                        grid[nextR][nextC] !== null && !visited.has(`${nextR},${nextC}`)) {
+                        visited.add(`${nextR},${nextC}`);
+                        queue.push(neighbor);
+                    }
+                }
+            }
+            return group;
+        }
+
+        function mergeElements(group, molecule) {
+            showMessage(`Merged: ${molecule.formula} (${molecule.name})! +${molecule.points}`);
+            updateScore(molecule.points);
+            updateTally(molecule.formula);
+            playSound();
+            
+            // New animation logic: add elements to a separate animation array
+            const centerR = group.reduce((sum, p) => sum + p.r, 0) / group.length;
+            const centerC = group.reduce((sum, p) => sum + p.c, 0) / group.length;
+            
+            for (const pos of group) {
+                const element = grid[pos.r][pos.c];
+                if (element) {
+                    const startX = pos.c * CELL_SIZE;
+                    const startY = pos.r * CELL_SIZE;
+                    const endX = centerC * CELL_SIZE;
+                    const endY = centerR * CELL_SIZE;
+                    
+                    animatingElements.push({
+                        ...element,
+                        startX: startX,
+                        startY: startY,
+                        endX: endX,
+                        endY: endY,
+                        startTime: Date.now()
+                    });
+                }
+                grid[pos.r][pos.c] = null;
+            }
+        }
+
+        function updateScore(points) {
+            score += points;
+            scoreDisplay.textContent = `Score: ${score}`;
+        }
+        
+        function isGameOver() {
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (grid[0][c] !== null) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        function showMessage(msg) {
+            messageBox.textContent = msg;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 1500);
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.molecule-item').forEach(item => {
+                item.classList.remove('highlighted');
+            });
+        }
+        
+        // --- Event Listeners ---
+        gameCanvas.addEventListener('click', (event) => {
+            if (isDropping || isMerging || isGameOver()) return;
+            clearHighlights(); // Clear highlights on new drop
+            const rect = gameCanvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const col = Math.floor(x / CELL_SIZE);
+            
+            if (col >= 0 && col < GRID_COLS) {
+                activeElement = nextElement;
+                nextElement = null; // Clear next element for a fresh one
+                dropElement(col);
+                generateNextElement();
+            }
+        });
+        
+        moleculeList.addEventListener('click', (event) => {
+            clearHighlights();
+            const clickedElement = event.target.closest('.molecule-item, .element-symbol, .element-name');
+            if (clickedElement) {
+                // Find the element symbol clicked
+                let elementSymbol = '';
+                if (clickedElement.classList.contains('molecule-item')) {
+                    // Clicks on the list item itself don't highlight.
+                    return;
+                } else if (clickedElement.classList.contains('element-symbol') || clickedElement.classList.contains('element-name')) {
+                    elementSymbol = clickedElement.textContent;
+                } else if (clickedElement.id && clickedElement.id.startsWith('tally-')) {
+                    // Clicks on the tally don't highlight.
+                    return;
+                }
+
+                // If an element symbol was found, highlight relevant molecules
+                if (elementSymbol) {
+                    molecules.forEach(mol => {
+                        for (const symbol in mol.elements) {
+                            if (symbol === elementSymbol) {
+                                const listItem = document.querySelector(`[data-formula="${mol.formula}"]`);
+                                if (listItem) {
+                                    listItem.classList.add('highlighted');
+                                }
+                                break;
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        newGameBtn.addEventListener('click', () => {
+            initGame();
+            newGameBtn.textContent = 'New Game';
+        });
+
+        soundBtn.addEventListener('click', () => {
+            soundOn = !soundOn;
+            const icon = soundBtn.querySelector('i');
+            icon.className = soundOn ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+        });
+
+        // Start the game
+        initGame();
+    });
+</script>
+
+</body>
+</html>
