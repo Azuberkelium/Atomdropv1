@@ -3,1276 +3,399 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azuberkelium's Molecule Merge</title>
+    <title>Molecule Merge</title>
+    <!-- Tailwind CSS from CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and ReactDOM from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
-        
+        /* Custom styles for game elements not covered by Tailwind */
         body {
             font-family: 'Inter', sans-serif;
+        }
+        .molecule-grid-cell {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
             display: flex;
+            align-items: center;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f5;
-            flex-direction: column;
-            color: #333;
-            overflow: hidden;
-            padding: 1rem;
-        }
-
-        .game-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #fff;
-            padding: 2rem;
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            max-width: 90%;
-            width: 500px;
-        }
-
-        h1 {
-            color: #4a4a4a;
-            margin-bottom: 0.5rem;
-        }
-
-        .info-bar {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding: 0 1rem;
-            font-weight: 700;
-        }
-
-        .target-display {
-            background-color: #e2e8f0;
-            padding: 0.5rem 1rem;
-            border-radius: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            transition: transform 0.2s ease-in-out;
-        }
-
-        .target-display:hover {
-            transform: translateY(-2px);
-        }
-        
-        #game-canvas {
-            border: 2px solid #a0a0a0;
-            background-color: #f8f8f8;
-            border-radius: 0.75rem;
-            touch-action: none;
-        }
-        
-        .game-status-message {
-            margin-top: 1rem;
-            height: 20px;
             font-weight: bold;
-            color: #ef4444;
-            text-align: center;
-            transition: opacity 0.5s ease-in-out;
-        }
-
-        .controls {
-            margin-top: 1rem;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 1rem;
-        }
-
-        .game-btn {
-            background-color: #6366f1;
+            font-size: 1.25rem;
             color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 700;
-            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
-            transition: all 0.2s ease-in-out;
-            touch-action: manipulation;
-        }
-        
-        .game-btn:hover {
-            background-color: #4f46e5;
-            transform: translateY(-2px);
-        }
-
-        .game-btn:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 5px rgba(99, 102, 241, 0.5);
-        }
-        
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease-in-out;
-            z-index: 1000;
-        }
-
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            text-align: center;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            max-width: 400px;
-            transform: translateY(-20px);
-            transition: transform 0.3s ease-in-out;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-overlay.active .modal-content {
-            transform: translateY(0);
-        }
-
-        .modal-content h2 {
-            margin-top: 0;
-        }
-        
-        .modal-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .modal-content button {
-            background-color: #f97316;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.75rem;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 700;
-        }
-
-        .molecules-list {
-            list-style: none;
-            padding: 0;
-            text-align: left;
-        }
-
-        .molecules-list li {
-            padding: 0.5rem 0;
-            border-bottom: 1px solid #ccc;
-        }
-
-        .molecules-list li:last-child {
-            border-bottom: none;
+            transition: transform 0.2s ease-out, background-color 0.2s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 <body>
+    <div id="root"></div>
 
-<div class="game-container">
-    <h1>Molecule Merge</h1>
-    <div class="info-bar">
-        <span>Level: <span id="level">1</span></span>
-        <span>Score: <span id="score">0</span></span>
-        <span>Time: <span id="timer">00:00</span></span>
-        <div class="target-display">
-            <span id="target-label">Target:</span> <span id="target-info"></span>
-        </div>
-    </div>
-    <div class="game-status-message" id="status-message"></div>
-    <canvas id="game-canvas"></canvas>
-    <div class="controls" id="controls">
-        <button class="game-btn" id="mode-button">Free Play</button>
-        <button class="game-btn" id="molecules-button">Molecules</button>
-        <button class="game-btn" id="rules-button">Rules</button>
-    </div>
-</div>
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
+        const { createRoot } = ReactDOM;
 
-<div class="modal-overlay" id="gameModal">
-    <div class="modal-content">
-        <h2 id="modal-title"></h2>
-        <div id="modal-body"></div>
-        <div class="modal-buttons" id="modal-buttons"></div>
-    </div>
-</div>
+        // Define a simplified periodic table for merging
+        const MOLECULES = {
+            'H': { label: 'H', color: 'bg-gray-400', next: 'He', name: 'Hydrogen' },
+            'He': { label: 'He', color: 'bg-blue-400', next: 'Li', name: 'Helium' },
+            'Li': { label: 'Li', color: 'bg-yellow-400', next: 'Be', name: 'Lithium' },
+            'Be': { label: 'Be', color: 'bg-green-400', next: 'B', name: 'Beryllium' },
+            'B': { label: 'B', color: 'bg-orange-400', next: 'C', name: 'Boron' },
+            'C': { label: 'C', color: 'bg-red-400', next: 'N', name: 'Carbon' },
+            'N': { label: 'N', color: 'bg-purple-400', next: 'O', name: 'Nitrogen' },
+            'O': { label: 'O', color: 'bg-pink-400', next: 'F', name: 'Oxygen' },
+            'F': { label: 'F', color: 'bg-cyan-400', next: null, name: 'Fluorine' }
+        };
 
-<script>
-    // Constants for game board and elements
-    const GRID_SIZE = 5;
-    const TILE_SIZE = 80;
-    const PADDING = 10;
-    const TILE_RADIUS = 10;
-    const FONT_SIZE = 24;
+        const GRID_WIDTH = 6;
+        const GRID_HEIGHT = 8;
+        const FREE_PLAY_DROP_INTERVAL = 1500;
+        const LEVEL_PLAY_BASE_DROP_INTERVAL = 1000;
 
-    // Canvas and context
-    const canvas = document.getElementById('game-canvas');
-    const ctx = canvas.getContext('2d');
-    
-    // Set canvas dimensions
-    canvas.width = GRID_SIZE * (TILE_SIZE + PADDING) + PADDING;
-    canvas.height = GRID_SIZE * (TILE_SIZE + PADDING) + PADDING;
+        const getNewMolecule = () => {
+            const keys = Object.keys(MOLECULES);
+            const molecule = keys[0]; // Start with Hydrogen
+            return molecule;
+        };
 
-    // Game state variables
-    let grid = [];
-    let currentLevel = 1;
-    let targetMoleculesFormed = 0;
-    let targetMolecule;
-    let nextTile = '';
-    let isGameOver = false;
-    let isAnimating = false;
-    let particles = [];
-    let score = 0;
-    let startTime;
-    let timerInterval;
-    let gameMode = 'level'; // 'level' or 'free-play'
+        const App = () => {
+            const [currentView, setCurrentView] = useState('home');
+            const [gameMode, setGameMode] = useState('freeplay');
+            const [grid, setGrid] = useState([]);
+            const [currentMolecule, setCurrentMolecule] = useState(null);
+            const [nextMolecule, setNextMolecule] = useState(getNewMolecule());
+            const [score, setScore] = useState(0);
+            const [level, setLevel] = useState(1);
+            const [targetMolecule, setTargetMolecule] = useState('O');
+            const [isGameOver, setIsGameOver] = useState(false);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [modalMessage, setModalMessage] = useState('');
+            const [modalConfirmAction, setModalConfirmAction] = useState(null);
+            const [showSuccessModal, setShowSuccessModal] = useState(false);
+            const intervalRef = useRef(null);
 
-    // Special tile state
-    let swapMode = false;
-    let firstSwapTile = null;
+            const initializeGrid = useCallback(() => {
+                const newGrid = Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(null));
+                setGrid(newGrid);
+                setIsGameOver(false);
+                setScore(0);
+                setLevel(1);
+                setCurrentMolecule(null);
+                setNextMolecule(getNewMolecule());
+            }, []);
 
-    // Elements and their properties
-    const ELEMENTS = {
-        H: { color: '#ffffff', textColor: '#444', name: 'Hydrogen' },
-        O: { color: '#ef4444', textColor: '#fff', name: 'Oxygen' },
-        C: { color: '#6b7280', textColor: '#fff', name: 'Carbon' },
-        N: { color: '#3b82f6', textColor: '#fff', name: 'Nitrogen' },
-        S: { color: '#f59e0b', textColor: '#fff', name: 'Sulfur' },
-        Cl: { color: '#16a34a', textColor: '#fff', name: 'Chlorine' },
-        '🎲': { color: '#a855f7', textColor: '#fff', name: 'Wildcard Dice' },
-        '💣': { color: '#000000', textColor: '#fff', name: 'Bomb' },
-        '🔄': { color: '#2dd4bf', textColor: '#fff', name: 'Swap' },
-        '🔨': { color: '#94a3b8', textColor: '#fff', name: 'Hammer' }
-    };
-    
-    // Level configurations and Free Play points
-    const LEVELS = {
-        1: {
-            target: { C: 1, O: 1 },
-            elements: ['H', 'O', 'C', 'N'],
-            name: 'Carbon Monoxide',
-            formula: '$CO$',
-            targetCount: 3,
-            wildcardChance: 0.1,
-            specialTileChance: 0.05,
-            points: 200
-        },
-        2: {
-            target: { H: 2, O: 1 },
-            elements: ['H', 'O'],
-            name: 'Water',
-            formula: '$H_2O$',
-            targetCount: 3,
-            wildcardChance: 0.1,
-            specialTileChance: 0.05,
-            points: 300
-        },
-        3: {
-            target: { C: 1, O: 2 },
-            elements: ['H', 'O', 'C'],
-            name: 'Carbon Dioxide',
-            formula: '$CO_2$',
-            targetCount: 2,
-            wildcardChance: 0.1,
-            specialTileChance: 0.1,
-            points: 300
-        },
-        4: {
-            target: { S: 1, O: 3 },
-            elements: ['H', 'O', 'C', 'N', 'S'],
-            name: 'Sulfur Trioxide',
-            formula: '$SO_3$',
-            targetCount: 2,
-            wildcardChance: 0.1,
-            specialTileChance: 0.1,
-            points: 400
-        },
-        5: {
-            target: { N: 1, H: 3 },
-            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
-            name: 'Ammonia',
-            formula: '$NH_3$',
-            targetCount: 3,
-            wildcardChance: 0.1,
-            specialTileChance: 0.1,
-            points: 400
-        },
-        6: {
-            target: { C: 1, H: 4 },
-            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
-            name: 'Methane',
-            formula: '$CH_4$',
-            targetCount: 2,
-            wildcardChance: 0.1,
-            specialTileChance: 0.15,
-            points: 500
-        },
-        7: {
-            target: { H: 2, O: 2 },
-            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
-            name: 'Hydrogen Peroxide',
-            formula: '$H_2O_2$',
-            targetCount: 3,
-            wildcardChance: 0.15,
-            specialTileChance: 0.15,
-            points: 400
-        },
-        8: {
-            target: { S: 1, O: 2 },
-            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
-            name: 'Sulfur Dioxide',
-            formula: '$SO_2$',
-            targetCount: 2,
-            wildcardChance: 0.15,
-            specialTileChance: 0.2,
-            points: 300
-        },
-        9: {
-            target: { N: 1, H: 3 },
-            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
-            name: 'Ammonia',
-            formula: '$NH_3$',
-            targetCount: 3,
-            wildcardChance: 0.2,
-            specialTileChance: 0.2,
-            points: 400
-        },
-        10: {
-            target: { C: 1, Cl: 4 },
-            elements: ['H', 'O', 'C', 'N', 'S', 'Cl'],
-            name: 'Carbon Tetrachloride',
-            formula: '$CCl_4$',
-            targetCount: 2,
-            wildcardChance: 0.2,
-            specialTileChance: 0.25,
-            points: 500
-        }
-    };
-    
-    // DOM elements
-    const levelDisplay = document.getElementById('level');
-    const scoreDisplay = document.getElementById('score');
-    const timerDisplay = document.getElementById('timer');
-    const targetLabel = document.getElementById('target-label');
-    const targetInfoDisplay = document.getElementById('target-info');
-    const rulesButton = document.getElementById('rules-button');
-    const moleculesButton = document.getElementById('molecules-button');
-    const modeButton = document.getElementById('mode-button');
-    const gameModal = document.getElementById('gameModal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalBody = document.getElementById('modal-body');
-    const modalButtonsContainer = document.getElementById('modal-buttons');
-    const statusMessage = document.getElementById('status-message');
+            const checkMerge = useCallback((y, x, newGrid) => {
+                const molecule = newGrid[y][x];
+                if (!molecule) return false;
 
-    /**
-     * Initializes a new game or level.
-     */
-    function initGame() {
-        grid = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
-        targetMoleculesFormed = 0;
-        isGameOver = false;
-        isAnimating = false;
-        particles = [];
-        
-        if (gameMode === 'level') {
-            const levelConfig = LEVELS[currentLevel] || LEVELS[1];
-            targetMolecule = levelConfig.target;
-            targetLabel.textContent = 'Target:';
-            targetInfoDisplay.textContent = levelConfig.name;
-            levelDisplay.textContent = currentLevel;
-            levelDisplay.style.visibility = 'visible';
-        } else {
-            targetLabel.textContent = 'Mode:';
-            targetInfoDisplay.textContent = 'Free Play';
-            levelDisplay.style.visibility = 'hidden';
-        }
-        
-        generateNextTile();
-        
-        hideModal();
-        draw();
-        
-        // Start the timer
-        startTime = Date.now();
-        clearInterval(timerInterval);
-        timerInterval = setInterval(updateTimerDisplay, 1000);
-    }
-    
-    /**
-     * Updates the timer display.
-     */
-    function updateTimerDisplay() {
-        if (!startTime) return;
-        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-        const minutes = Math.floor(elapsedSeconds / 60);
-        const seconds = elapsedSeconds % 60;
-        const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        timerDisplay.textContent = formattedTime;
-    }
-    
-    /**
-     * Updates the score display.
-     */
-    function updateScoreDisplay() {
-        scoreDisplay.textContent = score;
-    }
-    
-    /**
-     * Creates and animates a tile drop with a bounce effect.
-     * @param {number} col - The column to drop the tile into.
-     * @param {string} element - The element to drop.
-     */
-    function animateDrop(col, element) {
-        let finalRow = -1;
-        for (let r = GRID_SIZE - 1; r >= 0; r--) {
-            if (grid[r][col] === null) {
-                finalRow = r;
-                break;
-            }
-        }
-        
-        if (finalRow === -1) {
-            endGame('Column is full!');
-            return;
-        }
-
-        isAnimating = true;
-        const animationDuration = 300; // ms
-        const bounceHeight = TILE_SIZE * 0.2;
-        const bounceDuration = 100; // ms
-        const startTime = Date.now();
-
-        function animate() {
-            const elapsed = Date.now() - startTime;
-            if (elapsed >= animationDuration + bounceDuration) {
-                grid[finalRow][col] = element;
-                isAnimating = false;
-                checkAndRemoveMolecules();
-                draw();
-                if (isGridFull()) {
-                    if (gameMode === 'free-play') {
-                        endFreePlay();
-                    } else {
-                        endGame('Grid is full!');
-                    }
-                }
-                return;
-            }
-            
-            draw(); // Redraw static grid first
-
-            // Calculate current tile position
-            let currentY;
-            if (elapsed < animationDuration) {
-                // Falling animation
-                const progress = elapsed / animationDuration;
-                currentY = -TILE_SIZE + (finalRow * (TILE_SIZE + PADDING) + PADDING + TILE_SIZE) * progress;
-            } else {
-                // Bounce animation
-                const bounceElapsed = elapsed - animationDuration;
-                const bounceProgress = bounceElapsed / bounceDuration;
-                currentY = (finalRow * (TILE_SIZE + PADDING) + PADDING) + Math.sin(bounceProgress * Math.PI) * bounceHeight;
-            }
-
-            // Draw the falling tile
-            const x = col * (TILE_SIZE + PADDING) + PADDING;
-            ctx.fillStyle = ELEMENTS[element].color;
-            ctx.beginPath();
-            ctx.roundRect(x, currentY, TILE_SIZE, TILE_SIZE, TILE_RADIUS);
-            ctx.fill();
-            
-            ctx.fillStyle = ELEMENTS[element].textColor;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            const elementData = ELEMENTS[element];
-            if (elementData && elementData.name && (elementData.name === 'Bomb' || elementData.name === 'Swap' || elementData.name === 'Hammer' || elementData.name === 'Wildcard Dice')) {
-                ctx.font = `bold ${FONT_SIZE * 1.5}px sans-serif`;
-                ctx.fillText(element, x + TILE_SIZE / 2, currentY + TILE_SIZE / 2 + 5);
-            } else {
-                ctx.font = `bold ${FONT_SIZE}px 'Inter'`;
-                ctx.fillText(element, x + TILE_SIZE / 2, currentY + TILE_SIZE / 2);
-            }
-
-            requestAnimationFrame(animate);
-        }
-
-        animate();
-    }
-    
-    /**
-     * Draws the entire game state on the canvas.
-     */
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        ctx.fillStyle = '#e5e7eb';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        for (let row = 0; row < GRID_SIZE; row++) {
-            for (let col = 0; col < GRID_SIZE; col++) {
-                drawGridCell(col, row);
-                if (grid[row][col]) {
-                    drawTile(col, row, grid[row][col]);
-                }
-            }
-        }
-        
-        drawNextTilePreview();
-        drawParticles();
-    }
-
-    /**
-     * Draws a single grid cell.
-     * @param {number} col - The column index.
-     * @param {number} row - The row index.
-     */
-    function drawGridCell(col, row) {
-        ctx.fillStyle = '#d1d5db';
-        ctx.strokeStyle = '#9ca3af';
-        ctx.lineWidth = 1;
-        const x = col * (TILE_SIZE + PADDING) + PADDING;
-        const y = row * (TILE_SIZE + PADDING) + PADDING;
-        ctx.beginPath();
-        ctx.roundRect(x, y, TILE_SIZE, TILE_SIZE, TILE_RADIUS);
-        ctx.fill();
-        ctx.stroke();
-    }
-
-    /**
-     * Draws a tile on the canvas.
-     * @param {number} col - The column index.
-     * @param {number} row - The row index.
-     * @param {string} element - The element symbol (e.g., 'H', 'O', '🎲').
-     * @param {number} [scale=1] - The scale of the tile for animation.
-     */
-    function drawTile(col, row, element, scale = 1) {
-        const x = col * (TILE_SIZE + PADDING) + PADDING;
-        const y = row * (TILE_SIZE + PADDING) + PADDING;
-        
-        const elementData = ELEMENTS[element];
-        const tileScaledSize = TILE_SIZE * scale;
-        const scaledX = x + (TILE_SIZE - tileScaledSize) / 2;
-        const scaledY = y + (TILE_SIZE - tileScaledSize) / 2;
-
-        ctx.fillStyle = elementData.color;
-        ctx.beginPath();
-        ctx.roundRect(scaledX, scaledY, tileScaledSize, tileScaledSize, TILE_RADIUS * scale);
-        ctx.fill();
-        
-        ctx.fillStyle = elementData.textColor;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Handle special tiles separately for better rendering
-        if (['🎲', '💣', '🔄', '🔨'].includes(element)) {
-            ctx.font = `bold ${FONT_SIZE * scale * 1.5}px sans-serif`;
-            ctx.fillText(element, scaledX + tileScaledSize / 2, scaledY + tileScaledSize / 2 + 5);
-        } else {
-            ctx.font = `bold ${FONT_SIZE * scale}px 'Inter'`;
-            ctx.fillText(element, scaledX + tileScaledSize / 2, scaledY + tileScaledSize / 2);
-        }
-    }
-    
-    /**
-     * Draws the preview of the next tile to drop.
-     */
-    function drawNextTilePreview() {
-        const x = canvas.width / 2;
-        const y = PADDING / 2;
-        
-        ctx.font = `bold ${FONT_SIZE * 0.8}px 'Inter'`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#444';
-        ctx.fillText('Next', x, y - 20);
-        
-        const previewSize = TILE_SIZE * 0.7;
-        const elementData = ELEMENTS[nextTile];
-        
-        ctx.fillStyle = elementData.color;
-        ctx.beginPath();
-        ctx.roundRect(x - previewSize / 2, y + 5, previewSize, previewSize, TILE_RADIUS * 0.7);
-        ctx.fill();
-        
-        ctx.fillStyle = elementData.textColor;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Handle special tiles separately for better rendering
-        if (['🎲', '💣', '🔄', '🔨'].includes(nextTile)) {
-            ctx.font = `bold ${FONT_SIZE * 0.7 * 1.5}px sans-serif`;
-            ctx.fillText(nextTile, x, y + 5 + previewSize / 2 + 5);
-        } else {
-            ctx.font = `bold ${FONT_SIZE * 0.7}px 'Inter'`;
-            ctx.fillText(nextTile, x, y + 5 + previewSize / 2);
-        }
-    }
-
-    /**
-     * Generates a random element or special tile for the next tile.
-     */
-    function generateNextTile() {
-        // In free play, use elements from the highest level
-        const levelConfig = LEVELS[Math.max(...Object.keys(LEVELS).map(Number))] || LEVELS[1];
-        const elements = levelConfig.elements;
-        const wildcardChance = levelConfig.wildcardChance;
-        const specialTileChance = levelConfig.specialTileChance;
-        
-        const roll = Math.random();
-        if (roll < specialTileChance) {
-            const specialTiles = ['💣', '🔄', '🔨'];
-            nextTile = specialTiles[Math.floor(Math.random() * specialTiles.length)];
-        } else if (roll < specialTileChance + wildcardChance) {
-            nextTile = '🎲';
-        } else {
-            const randomIndex = Math.floor(Math.random() * elements.length);
-            nextTile = elements[randomIndex];
-        }
-    }
-    
-    /**
-     * Drops the current tile into the specified column.
-     * @param {number} col - The column to drop the tile into.
-     */
-    function dropTile(col) {
-        if (isGameOver || isAnimating || swapMode) return;
-        if (col < 0 || col >= GRID_SIZE) return;
-
-        let row = GRID_SIZE - 1;
-        while (row >= 0 && grid[row][col] !== null) {
-            row--;
-        }
-        
-        if (row < 0) {
-            if (gameMode === 'free-play') {
-                endFreePlay();
-            } else {
-                endGame('Column is full!');
-            }
-            return;
-        }
-
-        const tileToDrop = nextTile;
-        generateNextTile();
-
-        if (tileToDrop === '💣') {
-            handleBombTile(row, col);
-        } else if (tileToDrop === '🔄') {
-            handleSwapTile(row, col);
-        } else if (tileToDrop === '🔨') {
-            handleHammerTile(row, col);
-        } else {
-            // Drop a normal tile
-            animateDrop(col, tileToDrop);
-        }
-    }
-    
-    /**
-     * Handles the bomb tile effect.
-     * @param {number} row - The row of the dropped bomb.
-     * @param {number} col - The column of the dropped bomb.
-     */
-    function handleBombTile(row, col) {
-        const tilesToRemove = [];
-        const blastRadius = 1; // 1 means 3x3 area
-        
-        for (let r = row - blastRadius; r <= row + blastRadius; r++) {
-            for (let c = col - blastRadius; c <= col + blastRadius; c++) {
-                if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE && grid[r][c] !== null) {
-                    tilesToRemove.push({ r, c });
-                }
-            }
-        }
-        
-        if (tilesToRemove.length > 0) {
-            animateRemoval(tilesToRemove);
-        }
-        
-        grid[row][col] = null;
-        gravity();
-        draw();
-    }
-
-    /**
-     * Handles the swap tile effect.
-     * @param {number} row - The row of the dropped swap tile.
-     * @param {number} col - The column of the dropped swap tile.
-     */
-    function handleSwapTile(row, col) {
-        statusMessage.textContent = 'Swap Mode Active: Select first tile.';
-        swapMode = true;
-        firstSwapTile = null;
-        grid[row][col] = '🔄';
-        draw();
-    }
-    
-    /**
-     * Handles the hammer tile effect.
-     * @param {number} row - The row of the dropped hammer.
-     * @param {number} col - The column of the dropped hammer.
-     */
-    function handleHammerTile(row, col) {
-        const tilesToRemove = [{ r: row, c: col }];
-        animateRemoval(tilesToRemove);
-        grid[row][col] = null;
-        gravity();
-        draw();
-    }
-    
-    /**
-     * Animates the removal of a set of tiles.
-     * @param {Array<Object>} tiles - Array of tile coordinates to remove.
-     */
-    function animateRemoval(tiles) {
-        isAnimating = true;
-        const animationDuration = 500;
-        const startTime = Date.now();
-        
-        function animate() {
-            const elapsed = Date.now() - startTime;
-            const progress = elapsed / animationDuration;
-
-            if (progress >= 1) {
-                isAnimating = false;
-                tiles.forEach(tile => {
-                    grid[tile.r][tile.c] = null;
-                });
-                gravity();
-                draw();
-                return;
-            }
-
-            draw();
-            tiles.forEach(tile => {
-                const newScale = 1 - progress;
-                drawTile(tile.c, tile.r, tile.element, newScale);
-                createParticles(tile.c, tile.r, ELEMENTS[tile.element].color);
-            });
-            
-            requestAnimationFrame(animate);
-        }
-        
-        // Populate the tiles with their element before animation
-        tiles.forEach(tile => {
-            tile.element = grid[tile.r][tile.c];
-        });
-
-        animate();
-    }
-    
-    /**
-     * Creates a burst of particles from a specified location.
-     * @param {number} col - The column of the origin.
-     * @param {number} row - The row of the origin.
-     * @param {string} color - The color of the particles.
-     */
-    function createParticles(col, row, color) {
-        const particleCount = 20;
-        const x = col * (TILE_SIZE + PADDING) + PADDING + TILE_SIZE / 2;
-        const y = row * (TILE_SIZE + PADDING) + PADDING + TILE_SIZE / 2;
-        for (let i = 0; i < particleCount; i++) {
-            particles.push({
-                x,
-                y,
-                vx: (Math.random() - 0.5) * 5,
-                vy: (Math.random() - 0.5) * 5,
-                color,
-                size: Math.random() * 5 + 2,
-                alpha: 1
-            });
-        }
-    }
-    
-    /**
-     * Draws and updates all active particles.
-     */
-    function drawParticles() {
-        for (let i = particles.length - 1; i >= 0; i--) {
-            const p = particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.alpha -= 0.02;
-            p.size *= 0.98;
-            
-            if (p.alpha <= 0 || p.size <= 0.5) {
-                particles.splice(i, 1);
-            }
-            
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = p.alpha;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-        }
-        requestAnimationFrame(drawParticles);
-    }
-    
-    /**
-     * Checks if the entire grid is full of tiles.
-     * @returns {boolean} True if the grid is full, false otherwise.
-     */
-    function isGridFull() {
-        for (let row = 0; row < GRID_SIZE; row++) {
-            for (let col = 0; col < GRID_SIZE; col++) {
-                if (grid[row][col] === null) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Checks for molecule formations and removes them from the grid.
-     */
-    function checkAndRemoveMolecules() {
-        let moleculesFound = [];
-        let tilesToRemove = [];
-
-        // In Free Play mode, check for all 10 molecules
-        if (gameMode === 'free-play') {
-            for (const level in LEVELS) {
-                const target = LEVELS[level].target;
-                const moleculeName = LEVELS[level].name;
-                const moleculePoints = LEVELS[level].points;
-                
-                for (let r = 0; r < GRID_SIZE; r++) {
-                    for (let c = 0; c < GRID_SIZE; c++) {
-                        if (grid[r][c] !== null) {
-                            const matches = findMatchingMolecule(r, c, target);
-                            if (matches) {
-                                score += moleculePoints;
-                                updateScoreDisplay();
-                                matches.forEach(tile => {
-                                    if (!tilesToRemove.some(t => t.r === tile.r && t.c === tile.c)) {
-                                        tilesToRemove.push(tile);
-                                    }
-                                });
-                                moleculesFound.push(moleculeName);
-                            }
-                        }
-                    }
-                }
-            }
-        } else { // Level mode
-            const levelConfig = LEVELS[currentLevel] || LEVELS[1];
-            const target = levelConfig.target;
-            const moleculeName = levelConfig.name;
-            const moleculePoints = levelConfig.points;
-
-            for (let r = 0; r < GRID_SIZE; r++) {
-                for (let c = 0; c < GRID_SIZE; c++) {
-                    if (grid[r][c] !== null) {
-                        const matches = findMatchingMolecule(r, c, target);
-                        if (matches) {
-                            targetMoleculesFormed++;
-                            score += moleculePoints;
-                            updateScoreDisplay();
-                            matches.forEach(tile => {
-                                if (!tilesToRemove.some(t => t.r === tile.r && t.c === tile.c)) {
-                                    tilesToRemove.push(tile);
-                                }
-                            });
-                            moleculesFound.push(moleculeName);
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (tilesToRemove.length > 0) {
-            animateRemoval(tilesToRemove);
-            
-            let messageTitle = 'Molecule Found!';
-            let messageBody = '';
-            if (moleculesFound.length > 0) {
-                 messageBody = `You successfully formed ${moleculesFound.join(', ')}!`;
-            } else {
-                 messageBody = 'You successfully removed some tiles!';
-            }
-            showMessage(messageTitle, messageBody, [{ text: 'OK', action: hideModal }]);
-
-        } else {
-            gravity();
-            draw();
-        }
-        
-        // Check for level win condition
-        if (gameMode === 'level' && targetMoleculesFormed >= (LEVELS[currentLevel]?.targetCount || 0)) {
-            winLevel();
-        }
-    }
-    
-    /**
-     * Moves tiles down to fill empty spaces.
-     */
-    function gravity() {
-        for (let c = 0; c < GRID_SIZE; c++) {
-            let emptyRow = GRID_SIZE - 1;
-            for (let r = GRID_SIZE - 1; r >= 0; r--) {
-                if (grid[r][c] !== null) {
-                    if (r !== emptyRow) {
-                        grid[emptyRow][c] = grid[r][c];
-                        grid[r][c] = null;
-                    }
-                    emptyRow--;
-                }
-            }
-        }
-    }
-
-    /**
-     * Finds a matching molecule starting from a given cell using a Depth-First Search.
-     * @param {number} startRow - The starting row.
-     * @param {number} startCol - The starting column.
-     * @param {Object} target - The target molecule composition.
-     * @returns {Array|null} An array of tile coordinates if a match is found, otherwise null.
-     */
-    function findMatchingMolecule(startRow, startCol, target) {
-        const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
-        const foundTiles = [];
-        
-        const totalAtomsNeeded = Object.values(target).reduce((sum, val) => sum + val, 0);
-
-        function search(row, col, elementsFound) {
-            // Found a valid tile
-            foundTiles.push({ r: row, c: col });
-            
-            // Check if we have enough atoms
-            if (foundTiles.length === totalAtomsNeeded) {
-                // Check if the composition is correct
-                for (const element in target) {
-                    if ((elementsFound[element] || 0) !== target[element]) {
-                        foundTiles.pop();
-                        return false;
-                    }
-                }
-                return true;
-            }
-
-            const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-            for (const [dr, dc] of directions) {
-                const newRow = row + dr;
-                const newCol = col + dc;
-
-                if (newRow >= 0 && newRow < GRID_SIZE && newCol >= 0 && newCol < GRID_SIZE && !visited[newRow][newCol]) {
-                    const newElement = grid[newRow][newCol];
-                    if (newElement === null || ['💣', '🔄', '🔨'].includes(newElement)) continue;
-
-                    if (newElement === '🎲') {
-                        // Wildcard, try to match any missing element
-                        for (const targetElement in target) {
-                            if ((elementsFound[targetElement] || 0) < target[targetElement]) {
-                                visited[newRow][newCol] = true;
-                                elementsFound[targetElement] = (elementsFound[targetElement] || 0) + 1;
-                                
-                                if (search(newRow, newCol, elementsFound)) {
-                                    return true;
-                                }
-
-                                elementsFound[targetElement]--;
-                                visited[newRow][newCol] = false;
-                            }
-                        }
-                    } else if (target[newElement] && (elementsFound[newElement] || 0) < target[newElement]) {
-                        // Found a matching element, add it and continue
-                        visited[newRow][newCol] = true;
-                        elementsFound[newElement] = (elementsFound[newElement] || 0) + 1;
-                        
-                        if (search(newRow, newCol, elementsFound)) {
+                const checkAndMerge = (y1, x1, y2, x2) => {
+                    if (y1 >= 0 && y1 < GRID_HEIGHT && x1 >= 0 && x1 < GRID_WIDTH &&
+                        y2 >= 0 && y2 < GRID_HEIGHT && x2 >= 0 && x2 < GRID_WIDTH &&
+                        newGrid[y1][x1] === molecule && newGrid[y2][x2] === molecule) {
+                        const nextMolecule = MOLECULES[molecule].next;
+                        if (nextMolecule) {
+                            newGrid[y1][x1] = null;
+                            newGrid[y2][x2] = null;
+                            newGrid[y][x] = nextMolecule;
+                            setScore(prev => prev + 50 * level);
                             return true;
                         }
+                    }
+                    return false;
+                };
 
-                        elementsFound[newElement]--;
-                        visited[newRow][newCol] = false;
+                let merged = false;
+                // Check horizontal merge
+                if (checkAndMerge(y, x, y, x + 1) || checkAndMerge(y, x, y, x - 1)) merged = true;
+                // Check vertical merge
+                if (checkAndMerge(y, x, y + 1, x) || checkAndMerge(y, x, y - 1, x)) merged = true;
+                return merged;
+            }, [level]);
+
+            const findLowestSpot = useCallback((x, molecule) => {
+                let y = 0;
+                while (y < GRID_HEIGHT - 1 && grid[y + 1][x] === null) {
+                    y++;
+                }
+                return y;
+            }, [grid]);
+
+            const placeMolecule = useCallback((x) => {
+                const y = findLowestSpot(x, currentMolecule);
+                const newGrid = grid.map(row => [...row]);
+                
+                if (newGrid[y][x] !== null) {
+                    setIsGameOver(true);
+                    return;
+                }
+                
+                newGrid[y][x] = currentMolecule;
+
+                // Propagate merges
+                let merged = true;
+                while (merged) {
+                    merged = false;
+                    for (let row = GRID_HEIGHT - 1; row >= 0; row--) {
+                        for (let col = 0; col < GRID_WIDTH; col++) {
+                            if (checkMerge(row, col, newGrid)) {
+                                merged = true;
+                            }
+                        }
                     }
                 }
-            }
-            
-            // Backtrack if no path was found
-            foundTiles.pop();
-            return false;
-        }
-
-        const startElement = grid[startRow][startCol];
-        if (!startElement || ['💣', '🔄', '🔨'].includes(startElement)) return null;
-
-        const initialElements = {};
-        if (startElement === '🎲') {
-            for (const targetElement in target) {
-                if ((initialElements[targetElement] || 0) < target[targetElement]) {
-                    initialElements[targetElement] = (initialElements[targetElement] || 0) + 1;
-                    visited[startRow][startCol] = true;
-                    if (search(startRow, startCol, initialElements)) {
-                        return foundTiles;
+                
+                // Check for level completion
+                if (gameMode === 'levelplay') {
+                    const hasTarget = newGrid.flat().some(cell => cell === targetMolecule);
+                    if (hasTarget) {
+                        setShowSuccessModal(true);
+                        setLevel(prev => prev + 1);
+                        setTargetMolecule(MOLECULES[targetMolecule].next || targetMolecule);
                     }
-                    initialElements[targetElement]--;
-                    visited[startRow][startCol] = false;
                 }
-            }
-        } else if (target[startElement]) {
-            initialElements[startElement] = 1;
-            visited[startRow][startCol] = true;
-            if (search(startRow, startCol, initialElements)) {
-                return foundTiles;
-            }
-        }
-        
-        return null;
-    }
 
-    /**
-     * Shows a modal with custom content and buttons.
-     * @param {string} title - The title of the modal.
-     * @param {string} bodyContent - The HTML content for the modal body.
-     * @param {Array<Object>} actions - An array of objects with 'text' and 'action' for each button.
-     */
-    function showMessage(title, bodyContent, actions) {
-        modalTitle.textContent = title;
-        modalBody.innerHTML = bodyContent;
-        modalButtonsContainer.innerHTML = '';
-        
-        actions.forEach(action => {
-            const button = document.createElement('button');
-            button.className = 'game-btn';
-            button.textContent = action.text;
-            button.onclick = action.action;
-            modalButtonsContainer.appendChild(button);
-        });
-        
-        gameModal.classList.add('active');
-    }
+                setGrid(newGrid);
+                setCurrentMolecule(null);
+                setNextMolecule(getNewMolecule());
+            }, [currentMolecule, grid, findLowestSpot, checkMerge, gameMode, targetMolecule]);
 
-    /**
-     * Hides the modal.
-     */
-    function hideModal() {
-        gameModal.classList.remove('active');
-    }
-    
-    /**
-     * Ends the game and displays a message.
-     * @param {string} message - The message to display.
-     */
-    function endGame(message) {
-        isGameOver = true;
-        clearInterval(timerInterval);
-        const actions = [
-            { text: 'Start this Level Again', action: restartCurrentLevel },
-            { text: 'Start from Level 1', action: restartFromLevelOne }
-        ];
-        showMessage('Game Over!', message, actions);
-    }
-    
-    /**
-     * Ends the free play game.
-     */
-    function endFreePlay() {
-        isGameOver = true;
-        clearInterval(timerInterval);
-        const actions = [
-            { text: 'Play Again', action: initGame },
-            { text: 'Switch to Level Mode', action: switchToLevelMode }
-        ];
-        showMessage('Game Over!', `You reached a final score of ${score}.`, actions);
-    }
+            const handleKeyDown = useCallback((e) => {
+                if (isGameOver || currentView !== 'game') return;
 
-    /**
-     * Resets the game to level 1.
-     */
-    function restartFromLevelOne() {
-        score = 0;
-        updateScoreDisplay();
-        currentLevel = 1;
-        initGame();
-    }
-    
-    /**
-     * Restarts the current level.
-     */
-    function restartCurrentLevel() {
-        initGame();
-    }
+                const dropColumn = parseInt(e.key, 10) - 1;
+                if (!isNaN(dropColumn) && dropColumn >= 0 && dropColumn < GRID_WIDTH) {
+                    if (currentMolecule) {
+                        placeMolecule(dropColumn);
+                    }
+                }
+            }, [isGameOver, currentView, currentMolecule, placeMolecule]);
 
-    /**
-     * Advances to the next level.
-     */
-    function winLevel() {
-        clearInterval(timerInterval);
-        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-        
-        currentLevel++;
-        
-        let message;
-        let actions;
-        if (currentLevel > Object.keys(LEVELS).length) {
-            currentLevel = 1;
-            message = `You have completed all levels! You finished this level in ${elapsedSeconds} seconds. Starting over.`;
-            actions = [{ text: 'Play Again', action: initGame }];
-        } else {
-            message = `You finished this level in ${elapsedSeconds} seconds! Get ready for the next challenge.`;
-            actions = [{ text: 'Next Level', action: nextLevel }];
-        }
-        
-        showMessage('Level Complete!', message, actions);
-    }
-    
-    /**
-     * Moves to the next level after winning.
-     */
-    function nextLevel() {
-        initGame();
-    }
+            const handleClickDrop = useCallback((x) => {
+                if (isGameOver || currentView !== 'game' || !currentMolecule) return;
+                placeMolecule(x);
+            }, [isGameOver, currentView, currentMolecule, placeMolecule]);
 
-    /**
-     * Switches to Free Play mode.
-     */
-    function switchToFreePlayMode() {
-        gameMode = 'free-play';
-        modeButton.textContent = 'Level Mode';
-        score = 0;
-        updateScoreDisplay();
-        initGame();
-    }
+            useEffect(() => {
+                if (isGameOver || currentView !== 'game') {
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                    return;
+                }
+                if (!currentMolecule) {
+                    setCurrentMolecule(nextMolecule);
+                }
+            }, [currentMolecule, nextMolecule, isGameOver, currentView]);
 
-    /**
-     * Switches to Level mode.
-     */
-    function switchToLevelMode() {
-        gameMode = 'level';
-        modeButton.textContent = 'Free Play';
-        score = 0;
-        updateScoreDisplay();
-        initGame();
-    }
+            // Event listener for keyboard
+            useEffect(() => {
+                window.addEventListener('keydown', handleKeyDown);
+                return () => {
+                    window.removeEventListener('keydown', handleKeyDown);
+                };
+            }, [handleKeyDown]);
 
-    /**
-     * Shows the rules pop-up.
-     */
-    function showRules() {
-        const rulesHtml = `
-            <p><strong>Goal:</strong> Form the target molecule on the grid by dropping atoms into the columns.</p>
-            <p><strong>How to Play:</strong> Click anywhere in a column to release an atom into that column. Atoms fall to the lowest empty spot.</p>
-            <p><strong>Forming Molecules:</strong> When you connect the correct atoms for the target molecule, they will disappear. The remaining atoms will fall to fill the empty spaces.</p>
-            <p><strong>Special Tiles:</strong></p>
-            <ul>
-                <li><strong>Wildcard (\`🎲\`):</strong> Can act as any element to help you complete a molecule.</li>
-                <li><strong>Bomb (\`💣\`):</strong> Clears a small area of the board.</li>
-                <li><strong>Swap (\`🔄\`):</strong> Allows you to swap two tiles. Click it, then click the two tiles you want to swap.</li>
-                <li><strong>Hammer (\`🔨\`):</strong> Removes a single tile from the board.</li>
-            </ul>
-            <p><strong>Game Over:</strong> The game ends if any column fills up completely to the top.</p>
-        `;
-        showMessage('Rules', rulesHtml, [{ text: 'Got it!', action: hideModal }]);
-    }
-    
-    /**
-     * Shows the list of molecules and their points.
-     */
-    function showMolecules() {
-        let body = `<p>Form these molecules in Free Play to earn points!</p><ul class="molecules-list">`;
-        for (const level in LEVELS) {
-            const molecule = LEVELS[level];
-            body += `<li><strong>${molecule.name}</strong> (${molecule.formula}) - ${molecule.points} points</li>`;
-        }
-        body += `</ul>`;
-        showMessage('Available Molecules', body, [{ text: 'Got it!', action: hideModal }]);
-    }
-
-    /**
-     * Shows the chemical formula pop-up for the current level.
-     */
-    function showFormula() {
-        if (gameMode === 'free-play') {
-            showMolecules();
-            return;
-        }
-
-        const levelConfig = LEVELS[currentLevel] || LEVELS[1];
-        const formula = levelConfig.formula;
-        let body = `<p>The target molecule is <strong>${levelConfig.name}</strong>, with the chemical formula <strong>${formula}</strong>.</p>
-                    <p>You need to connect the following atoms:</p>
-                    <ul>`;
-        for (const element in levelConfig.target) {
-            body += `<li>${levelConfig.target[element]} x ${ELEMENTS[element].name} (${element})</li>`;
-        }
-        body += `</ul>`;
-        showMessage('Chemical Formula', body, [{ text: 'OK', action: hideModal }]);
-    }
-    
-    // Initial call to start the game
-    window.onload = function() {
-        initGame();
-    };
-
-    // Add event listeners for the new buttons
-    rulesButton.addEventListener('click', showRules);
-    moleculesButton.addEventListener('click', showMolecules);
-    modeButton.addEventListener('click', () => {
-        if (gameMode === 'level') {
-            switchToFreePlayMode();
-        } else {
-            switchToLevelMode();
-        }
-    });
-    targetInfoDisplay.addEventListener('click', showFormula);
-
-    // Add click listener to the canvas for dropping tiles
-    canvas.addEventListener('click', (e) => {
-        if (isGameOver || isAnimating) return;
-        
-        const x = e.offsetX;
-        const y = e.offsetY;
-        const col = Math.floor((x - PADDING) / (TILE_SIZE + PADDING));
-        const row = Math.floor((y - PADDING) / (TILE_SIZE + PADDING));
-
-        if (swapMode) {
-            if (row >= 0 && row < GRID_SIZE && col >= 0 && col < GRID_SIZE && grid[row][col] !== null) {
-                if (firstSwapTile === null) {
-                    firstSwapTile = { r: row, c: col };
-                    statusMessage.textContent = 'Swap Mode Active: Select second tile.';
+            const handleModeSwitch = (mode) => {
+                if (score > 0) {
+                    setModalMessage(`Your current progress will be lost. Are you sure you want to switch to ${mode} mode?`);
+                    setModalConfirmAction(() => () => {
+                        setGameMode(mode);
+                        setCurrentView('game');
+                        setIsModalOpen(false);
+                        initializeGrid();
+                    });
+                    setIsModalOpen(true);
                 } else {
-                    const secondSwapTile = { r: row, c: col };
-                    if (firstSwapTile.r === secondSwapTile.r && firstSwapTile.c === secondSwapTile.c) {
-                        statusMessage.textContent = 'Please select a different tile.';
-                        return;
-                    }
-                    
-                    const temp = grid[firstSwapTile.r][firstSwapTile.c];
-                    grid[firstSwapTile.r][firstSwapTile.c] = grid[secondSwapTile.r][secondSwapTile.c];
-                    grid[secondSwapTile.r][secondSwapTile.c] = temp;
-                    
-                    swapMode = false;
-                    firstSwapTile = null;
-                    statusMessage.textContent = '';
-                    draw();
+                    setGameMode(mode);
+                    setCurrentView('game');
+                    initializeGrid();
                 }
-            }
-        } else {
-            dropTile(col);
-        }
-    });
-</script>
+            };
 
+            const renderGrid = () => (
+                <div className="flex flex-col items-center">
+                    <div className="grid grid-cols-6 gap-1 p-2 bg-gray-900 rounded-lg shadow-xl mb-4 border-4 border-gray-800">
+                        {Array.from({ length: GRID_WIDTH }).map((_, x) => (
+                            <button
+                                key={`drop-${x}`}
+                                onClick={() => handleClickDrop(x)}
+                                className="w-12 h-8 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
+                            >
+                                <i className="fas fa-arrow-down"></i>
+                            </button>
+                        ))}
+                    </div>
+                    <div className="grid border-4 border-gray-800 rounded-lg overflow-hidden bg-gray-900 shadow-xl"
+                        style={{ gridTemplateColumns: `repeat(${GRID_WIDTH}, 1fr)` }}>
+                        {grid.flat().map((molecule, index) => (
+                            <div
+                                key={index}
+                                className={`molecule-grid-cell ${molecule ? MOLECULES[molecule].color : 'bg-transparent'}`}
+                            >
+                                {molecule ? MOLECULES[molecule].label : ''}
+                            </div>
+                        ))}
+                    </div>
+                    {isGameOver && (
+                        <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center rounded-lg text-white text-center p-4">
+                            <h2 className="text-5xl font-bold mb-4">Game Over!</h2>
+                            <p className="text-2xl mb-6">Final Score: {score}</p>
+                            <button
+                                onClick={() => initializeGrid()}
+                                className="px-6 py-3 bg-red-600 text-white font-bold rounded-full transition-transform transform hover:scale-105 shadow-lg"
+                            >
+                                Play Again
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+
+            const renderHomePage = () => (
+                <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 font-sans">
+                    <h1 className="text-5xl font-bold mb-6 text-gray-800 drop-shadow-lg">Molecule Merge</h1>
+                    <div className="w-full max-w-xl p-8 bg-white rounded-lg shadow-xl border-2 border-gray-200 text-center">
+                        <h2 className="text-3xl font-bold mb-4 text-gray-700">How to Play</h2>
+                        <ul className="list-disc list-inside text-left text-gray-600 space-y-2 mb-8">
+                            <li>Click the **down arrow** buttons or use keyboard keys **1-6** to drop molecules into the column of your choice.</li>
+                            <li>When two identical molecules touch, they will merge into the next one on the periodic table.</li>
+                            <li>The game ends if a column overflows.</li>
+                            <li>In **Level Mode**, you must create the target molecule to advance. The speed of merges may increase with each level.</li>
+                            <li>In **Free Play**, the game continues indefinitely.</li>
+                        </ul>
+                        <div className="flex justify-center space-x-4">
+                            <button
+                                onClick={() => handleModeSwitch('freeplay')}
+                                className="px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 bg-indigo-600 text-white shadow-lg hover:bg-indigo-700"
+                            >
+                                Start Free Play
+                            </button>
+                            <button
+                                onClick={() => handleModeSwitch('levelplay')}
+                                className="px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 bg-emerald-600 text-white shadow-lg hover:bg-emerald-700"
+                            >
+                                Start Level Play
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderGameView = () => (
+                <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 font-sans">
+                    <h1 className="text-4xl font-bold mb-6 text-gray-800 drop-shadow-lg">Molecule Merge</h1>
+                    <div className="flex space-x-4 mb-8">
+                        <button
+                            onClick={() => handleModeSwitch('freeplay')}
+                            className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 ${gameMode === 'freeplay' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-indigo-300 text-indigo-800 hover:bg-indigo-400'}`}
+                        >
+                            Free Play
+                        </button>
+                        <button
+                            onClick={() => handleModeSwitch('levelplay')}
+                            className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 ${gameMode === 'levelplay' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-emerald-300 text-emerald-800 hover:bg-emerald-400'}`}
+                        >
+                            Level Play
+                        </button>
+                        <button
+                            onClick={() => setCurrentView('home')}
+                            className="px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 bg-gray-400 text-gray-800 hover:bg-gray-500"
+                        >
+                            Home
+                        </button>
+                    </div>
+
+                    <div className="flex items-start space-x-8">
+                        <div className="relative">
+                            {renderGrid()}
+                        </div>
+                        <div className="w-56 p-6 bg-white rounded-lg shadow-lg border-2 border-gray-200">
+                            <div className="text-xl font-bold text-center text-gray-700 mb-4">Game Stats</div>
+                            <div className="space-y-3">
+                                <p className="flex justify-between text-lg">
+                                    <span className="font-semibold text-gray-600">Score:</span>
+                                    <span className="font-bold text-gray-800">{score}</span>
+                                </p>
+                                {gameMode === 'levelplay' && (
+                                    <>
+                                        <p className="flex justify-between text-lg">
+                                            <span className="font-semibold text-gray-600">Level:</span>
+                                            <span className="font-bold text-gray-800">{level}</span>
+                                        </p>
+                                        <p className="flex justify-between text-lg">
+                                            <span className="font-semibold text-gray-600">Target:</span>
+                                            <span className={`font-bold text-gray-800 ${MOLECULES[targetMolecule].color} px-2 rounded`}>{MOLECULES[targetMolecule].label}</span>
+                                        </p>
+                                    </>
+                                )}
+                            </div>
+                            <div className="mt-6">
+                                <h3 className="text-xl font-bold text-center text-gray-700 mb-3">Next Element</h3>
+                                <div className="p-2 border border-gray-300 rounded-md bg-gray-100 flex items-center justify-center">
+                                    {nextMolecule && (
+                                        <div
+                                            className={`w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold text-white ${MOLECULES[nextMolecule].color}`}
+                                        >
+                                            {MOLECULES[nextMolecule].label}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                            <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm">
+                                <h3 className="text-2xl font-bold mb-4 text-gray-800">Confirm Action</h3>
+                                <p className="text-lg text-gray-600 mb-6">{modalMessage}</p>
+                                <div className="flex justify-center space-x-4">
+                                    <button
+                                        onClick={modalConfirmAction}
+                                        className="px-6 py-3 bg-red-500 text-white font-semibold rounded-full hover:bg-red-600 transition-colors shadow"
+                                    >
+                                        Yes
+                                    </button>
+                                    <button
+                                        onClick={() => setIsModalOpen(false)}
+                                        className="px-6 py-3 bg-gray-300 text-gray-800 font-semibold rounded-full hover:bg-gray-400 transition-colors shadow"
+                                    >
+                                        No
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {showSuccessModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                            <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm">
+                                <h3 className="text-3xl font-bold mb-4 text-green-600">Level Complete! 🎉</h3>
+                                <p className="text-lg text-gray-600 mb-6">
+                                    You successfully created {MOLECULES[targetMolecule].name}! You are now on Level {level + 1}.
+                                </p>
+                                <button
+                                    onClick={() => setShowSuccessModal(false)}
+                                    className="px-6 py-3 bg-green-500 text-white font-semibold rounded-full hover:bg-green-600 transition-colors shadow"
+                                >
+                                    Continue
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+
+            return (
+                <>
+                    {currentView === 'home' && renderHomePage()}
+                    {currentView === 'game' && renderGameView()}
+                </>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
 </body>
 </html>
