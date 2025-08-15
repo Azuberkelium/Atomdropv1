@@ -46,7 +46,7 @@
             font-weight: 700;
         }
 
-        .target-molecule {
+        .target-display {
             background-color: #e2e8f0;
             padding: 0.5rem 1rem;
             border-radius: 0.75rem;
@@ -57,7 +57,7 @@
             transition: transform 0.2s ease-in-out;
         }
 
-        .target-molecule:hover {
+        .target-display:hover {
             transform: translateY(-2px);
         }
         
@@ -85,7 +85,7 @@
             gap: 1rem;
         }
 
-        .game-btn, .column-btn {
+        .game-btn {
             background-color: #6366f1;
             color: white;
             border: none;
@@ -99,12 +99,12 @@
             touch-action: manipulation;
         }
         
-        .game-btn:hover, .column-btn:hover {
+        .game-btn:hover {
             background-color: #4f46e5;
             transform: translateY(-2px);
         }
 
-        .game-btn:active, .column-btn:active {
+        .game-btn:active {
             transform: translateY(0);
             box-shadow: 0 2px 5px rgba(99, 102, 241, 0.5);
         }
@@ -139,6 +139,8 @@
             max-width: 400px;
             transform: translateY(-20px);
             transition: transform 0.3s ease-in-out;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         .modal-overlay.active .modal-content {
@@ -166,6 +168,21 @@
             font-size: 1rem;
             font-weight: 700;
         }
+
+        .molecules-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+
+        .molecules-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .molecules-list li:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
@@ -176,13 +193,15 @@
         <span>Level: <span id="level">1</span></span>
         <span>Score: <span id="score">0</span></span>
         <span>Time: <span id="timer">00:00</span></span>
-        <div class="target-molecule">
-            Target: <span id="target-molecule"></span>
+        <div class="target-display">
+            <span id="target-label">Target:</span> <span id="target-info"></span>
         </div>
     </div>
     <div class="game-status-message" id="status-message"></div>
     <canvas id="game-canvas"></canvas>
     <div class="controls" id="controls">
+        <button class="game-btn" id="mode-button">Free Play</button>
+        <button class="game-btn" id="molecules-button">Molecules</button>
         <button class="game-btn" id="rules-button">Rules</button>
     </div>
 </div>
@@ -223,6 +242,7 @@
     let score = 0;
     let startTime;
     let timerInterval;
+    let gameMode = 'level'; // 'level' or 'free-play'
 
     // Special tile state
     let swapMode = false;
@@ -242,7 +262,7 @@
         '🔨': { color: '#94a3b8', textColor: '#fff', name: 'Hammer' }
     };
     
-    // Level configurations
+    // Level configurations and Free Play points
     const LEVELS = {
         1: {
             target: { C: 1, O: 1 },
@@ -251,7 +271,8 @@
             formula: '$CO$',
             targetCount: 3,
             wildcardChance: 0,
-            specialTileChance: 0
+            specialTileChance: 0,
+            points: 200
         },
         2: {
             target: { H: 2, O: 1 },
@@ -260,7 +281,8 @@
             formula: '$H_2O$',
             targetCount: 3,
             wildcardChance: 0,
-            specialTileChance: 0
+            specialTileChance: 0,
+            points: 300
         },
         3: {
             target: { C: 1, O: 2 },
@@ -269,7 +291,8 @@
             formula: '$CO_2$',
             targetCount: 2,
             wildcardChance: 0,
-            specialTileChance: 0
+            specialTileChance: 0,
+            points: 300
         },
         4: {
             target: { S: 1, O: 3 },
@@ -278,7 +301,8 @@
             formula: '$SO_3$',
             targetCount: 2,
             wildcardChance: 0.1,
-            specialTileChance: 0.1
+            specialTileChance: 0.1,
+            points: 400
         },
         5: {
             target: { N: 1, H: 3 },
@@ -287,7 +311,8 @@
             formula: '$NH_3$',
             targetCount: 3,
             wildcardChance: 0.1,
-            specialTileChance: 0.1
+            specialTileChance: 0.1,
+            points: 400
         },
         6: {
             target: { C: 1, H: 4 },
@@ -296,7 +321,8 @@
             formula: '$CH_4$',
             targetCount: 2,
             wildcardChance: 0.1,
-            specialTileChance: 0.15
+            specialTileChance: 0.15,
+            points: 500
         },
         7: {
             target: { H: 2, O: 2 },
@@ -305,7 +331,8 @@
             formula: '$H_2O_2$',
             targetCount: 3,
             wildcardChance: 0.15,
-            specialTileChance: 0.15
+            specialTileChance: 0.15,
+            points: 400
         },
         8: {
             target: { S: 1, O: 2 },
@@ -314,7 +341,8 @@
             formula: '$SO_2$',
             targetCount: 2,
             wildcardChance: 0.15,
-            specialTileChance: 0.2
+            specialTileChance: 0.2,
+            points: 300
         },
         9: {
             target: { N: 1, H: 3 },
@@ -323,7 +351,8 @@
             formula: '$NH_3$',
             targetCount: 3,
             wildcardChance: 0.2,
-            specialTileChance: 0.2
+            specialTileChance: 0.2,
+            points: 400
         },
         10: {
             target: { C: 1, Cl: 4 },
@@ -332,7 +361,8 @@
             formula: '$CCl_4$',
             targetCount: 2,
             wildcardChance: 0.2,
-            specialTileChance: 0.25
+            specialTileChance: 0.25,
+            points: 500
         }
     };
     
@@ -340,8 +370,11 @@
     const levelDisplay = document.getElementById('level');
     const scoreDisplay = document.getElementById('score');
     const timerDisplay = document.getElementById('timer');
-    const targetMoleculeDisplay = document.getElementById('target-molecule');
+    const targetLabel = document.getElementById('target-label');
+    const targetInfoDisplay = document.getElementById('target-info');
     const rulesButton = document.getElementById('rules-button');
+    const moleculesButton = document.getElementById('molecules-button');
+    const modeButton = document.getElementById('mode-button');
     const gameModal = document.getElementById('gameModal');
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
@@ -358,10 +391,18 @@
         isAnimating = false;
         particles = [];
         
-        const levelConfig = LEVELS[currentLevel] || LEVELS[1];
-        targetMolecule = levelConfig.target;
-        targetMoleculeDisplay.textContent = levelConfig.name;
-        levelDisplay.textContent = currentLevel;
+        if (gameMode === 'level') {
+            const levelConfig = LEVELS[currentLevel] || LEVELS[1];
+            targetMolecule = levelConfig.target;
+            targetLabel.textContent = 'Target:';
+            targetInfoDisplay.textContent = levelConfig.name;
+            levelDisplay.textContent = currentLevel;
+            levelDisplay.style.visibility = 'visible';
+        } else {
+            targetLabel.textContent = 'Mode:';
+            targetInfoDisplay.textContent = 'Free Play';
+            levelDisplay.style.visibility = 'hidden';
+        }
         
         generateNextTile();
         
@@ -428,7 +469,11 @@
                 checkAndRemoveMolecules();
                 draw();
                 if (isGridFull()) {
-                    endGame('Grid is full!');
+                    if (gameMode === 'free-play') {
+                        endFreePlay();
+                    } else {
+                        endGame('Grid is full!');
+                    }
                 }
                 return;
             }
@@ -587,7 +632,8 @@
      * Generates a random element or special tile for the next tile.
      */
     function generateNextTile() {
-        const levelConfig = LEVELS[currentLevel] || LEVELS[1];
+        // In free play, use elements from the highest level
+        const levelConfig = LEVELS[Math.max(...Object.keys(LEVELS).map(Number))] || LEVELS[1];
         const elements = levelConfig.elements;
         const wildcardChance = levelConfig.wildcardChance;
         const specialTileChance = levelConfig.specialTileChance;
@@ -618,7 +664,11 @@
         }
         
         if (row < 0) {
-            endGame('Column is full!');
+            if (gameMode === 'free-play') {
+                endFreePlay();
+            } else {
+                endGame('Column is full!');
+            }
             return;
         }
 
@@ -669,7 +719,6 @@
      * @param {number} col - The column of the dropped swap tile.
      */
     function handleSwapTile(row, col) {
-        showMessage('Swap Mode', 'Click on the two tiles you want to swap.', []);
         statusMessage.textContent = 'Swap Mode Active: Select first tile.';
         swapMode = true;
         firstSwapTile = null;
@@ -798,24 +847,55 @@
      * Checks for molecule formations and removes them from the grid.
      */
     function checkAndRemoveMolecules() {
-        const levelConfig = LEVELS[currentLevel] || LEVELS[1];
-        const target = levelConfig.target;
-        let moleculesFound = 0;
-        const tilesToRemove = [];
+        let moleculesFound = [];
+        let tilesToRemove = [];
 
-        for (let r = 0; r < GRID_SIZE; r++) {
-            for (let c = 0; c < GRID_SIZE; c++) {
-                if (grid[r][c] !== null) {
-                    const matches = findMatchingMolecule(r, c, target);
-                    if (matches) {
-                        moleculesFound++;
-                        score += Object.values(target).reduce((sum, val) => sum + val, 0) * 100;
-                        updateScoreDisplay();
-                        matches.forEach(tile => {
-                            if (!tilesToRemove.some(t => t.r === tile.r && t.c === tile.c)) {
-                                tilesToRemove.push(tile);
+        // In Free Play mode, check for all 10 molecules
+        if (gameMode === 'free-play') {
+            for (const level in LEVELS) {
+                const target = LEVELS[level].target;
+                const moleculeName = LEVELS[level].name;
+                const moleculePoints = LEVELS[level].points;
+                
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        if (grid[r][c] !== null) {
+                            const matches = findMatchingMolecule(r, c, target);
+                            if (matches) {
+                                score += moleculePoints;
+                                updateScoreDisplay();
+                                matches.forEach(tile => {
+                                    if (!tilesToRemove.some(t => t.r === tile.r && t.c === tile.c)) {
+                                        tilesToRemove.push(tile);
+                                    }
+                                });
+                                moleculesFound.push(moleculeName);
                             }
-                        });
+                        }
+                    }
+                }
+            }
+        } else { // Level mode
+            const levelConfig = LEVELS[currentLevel] || LEVELS[1];
+            const target = levelConfig.target;
+            const moleculeName = levelConfig.name;
+            const moleculePoints = levelConfig.points;
+
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (grid[r][c] !== null) {
+                        const matches = findMatchingMolecule(r, c, target);
+                        if (matches) {
+                            targetMoleculesFormed++;
+                            score += moleculePoints;
+                            updateScoreDisplay();
+                            matches.forEach(tile => {
+                                if (!tilesToRemove.some(t => t.r === tile.r && t.c === tile.c)) {
+                                    tilesToRemove.push(tile);
+                                }
+                            });
+                            moleculesFound.push(moleculeName);
+                        }
                     }
                 }
             }
@@ -823,18 +903,23 @@
         
         if (tilesToRemove.length > 0) {
             animateRemoval(tilesToRemove);
-            showMessage(
-                'Molecule Found!',
-                `You successfully formed ${levelConfig.name}! You earned ${tilesToRemove.length * 100} points!`,
-                [{ text: 'OK', action: hideModal }]
-            );
+            
+            let messageTitle = 'Molecule Found!';
+            let messageBody = '';
+            if (moleculesFound.length > 0) {
+                 messageBody = `You successfully formed ${moleculesFound.join(', ')}!`;
+            } else {
+                 messageBody = 'You successfully removed some tiles!';
+            }
+            showMessage(messageTitle, messageBody, [{ text: 'OK', action: hideModal }]);
+
         } else {
             gravity();
             draw();
         }
         
         // Check for level win condition
-        if (targetMoleculesFormed >= levelConfig.targetCount) {
+        if (gameMode === 'level' && targetMoleculesFormed >= (LEVELS[currentLevel]?.targetCount || 0)) {
             winLevel();
         }
     }
@@ -867,11 +952,19 @@
     function findMatchingMolecule(startRow, startCol, target) {
         const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
         const foundTiles = [];
+        
+        const totalAtomsNeeded = Object.values(target).reduce((sum, val) => sum + val, 0);
 
         function search(row, col, elementsFound) {
-            if (foundTiles.length === Object.values(target).reduce((sum, val) => sum + val, 0)) {
+            // Found a valid tile
+            foundTiles.push({ r: row, c: col });
+            
+            // Check if we have enough atoms
+            if (foundTiles.length === totalAtomsNeeded) {
+                // Check if the composition is correct
                 for (const element in target) {
                     if ((elementsFound[element] || 0) !== target[element]) {
+                        foundTiles.pop();
                         return false;
                     }
                 }
@@ -888,36 +981,37 @@
                     if (newElement === null || ['💣', '🔄', '🔨'].includes(newElement)) continue;
 
                     if (newElement === '🎲') {
+                        // Wildcard, try to match any missing element
                         for (const targetElement in target) {
                             if ((elementsFound[targetElement] || 0) < target[targetElement]) {
                                 visited[newRow][newCol] = true;
-                                foundTiles.push({ r: newRow, c: newCol });
                                 elementsFound[targetElement] = (elementsFound[targetElement] || 0) + 1;
                                 
                                 if (search(newRow, newCol, elementsFound)) {
                                     return true;
                                 }
 
-                                foundTiles.pop();
                                 elementsFound[targetElement]--;
                                 visited[newRow][newCol] = false;
                             }
                         }
                     } else if (target[newElement] && (elementsFound[newElement] || 0) < target[newElement]) {
+                        // Found a matching element, add it and continue
                         visited[newRow][newCol] = true;
-                        foundTiles.push({ r: newRow, c: newCol });
                         elementsFound[newElement] = (elementsFound[newElement] || 0) + 1;
                         
                         if (search(newRow, newCol, elementsFound)) {
                             return true;
                         }
 
-                        foundTiles.pop();
                         elementsFound[newElement]--;
                         visited[newRow][newCol] = false;
                     }
                 }
             }
+            
+            // Backtrack if no path was found
+            foundTiles.pop();
             return false;
         }
 
@@ -930,11 +1024,9 @@
                 if ((initialElements[targetElement] || 0) < target[targetElement]) {
                     initialElements[targetElement] = (initialElements[targetElement] || 0) + 1;
                     visited[startRow][startCol] = true;
-                    foundTiles.push({ r: startRow, c: startCol });
                     if (search(startRow, startCol, initialElements)) {
                         return foundTiles;
                     }
-                    foundTiles.pop();
                     initialElements[targetElement]--;
                     visited[startRow][startCol] = false;
                 }
@@ -942,7 +1034,6 @@
         } else if (target[startElement]) {
             initialElements[startElement] = 1;
             visited[startRow][startCol] = true;
-            foundTiles.push({ r: startRow, c: startCol });
             if (search(startRow, startCol, initialElements)) {
                 return foundTiles;
             }
@@ -995,6 +1086,19 @@
     }
     
     /**
+     * Ends the free play game.
+     */
+    function endFreePlay() {
+        isGameOver = true;
+        clearInterval(timerInterval);
+        const actions = [
+            { text: 'Play Again', action: initGame },
+            { text: 'Switch to Level Mode', action: switchToLevelMode }
+        ];
+        showMessage('Game Over!', `You reached a final score of ${score}.`, actions);
+    }
+
+    /**
      * Resets the game to level 1.
      */
     function restartFromLevelOne() {
@@ -1042,6 +1146,28 @@
     }
 
     /**
+     * Switches to Free Play mode.
+     */
+    function switchToFreePlayMode() {
+        gameMode = 'free-play';
+        modeButton.textContent = 'Level Mode';
+        score = 0;
+        updateScoreDisplay();
+        initGame();
+    }
+
+    /**
+     * Switches to Level mode.
+     */
+    function switchToLevelMode() {
+        gameMode = 'level';
+        modeButton.textContent = 'Free Play';
+        score = 0;
+        updateScoreDisplay();
+        initGame();
+    }
+
+    /**
      * Shows the rules pop-up.
      */
     function showRules() {
@@ -1060,11 +1186,29 @@
         `;
         showMessage('Rules', rulesHtml, [{ text: 'Got it!', action: hideModal }]);
     }
+    
+    /**
+     * Shows the list of molecules and their points.
+     */
+    function showMolecules() {
+        let body = `<p>Form these molecules in Free Play to earn points!</p><ul class="molecules-list">`;
+        for (const level in LEVELS) {
+            const molecule = LEVELS[level];
+            body += `<li><strong>${molecule.name}</strong> (${molecule.formula}) - ${molecule.points} points</li>`;
+        }
+        body += `</ul>`;
+        showMessage('Available Molecules', body, [{ text: 'Got it!', action: hideModal }]);
+    }
 
     /**
      * Shows the chemical formula pop-up for the current level.
      */
     function showFormula() {
+        if (gameMode === 'free-play') {
+            showMolecules();
+            return;
+        }
+
         const levelConfig = LEVELS[currentLevel] || LEVELS[1];
         const formula = levelConfig.formula;
         let body = `<p>The target molecule is <strong>${levelConfig.name}</strong>, with the chemical formula <strong>${formula}</strong>.</p>
@@ -1084,7 +1228,15 @@
 
     // Add event listeners for the new buttons
     rulesButton.addEventListener('click', showRules);
-    targetMoleculeDisplay.addEventListener('click', showFormula);
+    moleculesButton.addEventListener('click', showMolecules);
+    modeButton.addEventListener('click', () => {
+        if (gameMode === 'level') {
+            switchToFreePlayMode();
+        } else {
+            switchToLevelMode();
+        }
+    });
+    targetInfoDisplay.addEventListener('click', showFormula);
 
     // Add click listener to the canvas for dropping tiles
     canvas.addEventListener('click', (e) => {
