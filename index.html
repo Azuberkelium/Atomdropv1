@@ -3,411 +3,761 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Molecule Merge</title>
-    <!-- Tailwind CSS from CDN for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React and ReactDOM from CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
-    <!-- Font Awesome for icons -->
+    <title>Molecule Merge by Azuberkelium</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Babel Standalone for JSX support in the browser -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
     <style>
-        /* Custom styles for game elements not covered by Tailwind */
+        :root {
+            --primary-color: #4A90E2;
+            --secondary-color: #50E3C2;
+            --dark-bg: #2C3E50;
+            --light-bg: #ECF0F1;
+            --text-color: #ECF0F1;
+            /* Updated Element Colors for better clarity and uniqueness */
+            --element-H: #B3E5FC; /* Light Sky Blue */
+            --element-O: #EF5350; /* Red */
+            --element-C: #263238; /* Dark Gray */
+            --element-N: #673AB7; /* Deep Purple */
+            --element-Na: #FFB74D; /* Light Orange */
+            --element-Cl: #8BC34A; /* Green */
+            --element-S: #FFEB3B; /* Yellow */
+            --element-Ca: #795548; /* Brown */
+            --element-Fe: #D32F2F; /* Rusty Red */
+            --element-K: #E91E63; /* Pink Magenta */
+            --element-Mg: #CDDC39; /* Lime Green */
+            --element-Al: #BDBDBD; /* Silver Gray */
+            --element-P: #FF5722; /* Deep Orange */
+            --element-Si: #9E9E9E; /* Medium Gray */
+            --element-He: #00FFFF;
+            --element-Ne: #ADD8E6;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-        }
-        .molecule-grid-cell {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
+            background-color: var(--dark-bg);
+            color: var(--text-color);
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            border-radius: 15px;
+            background-color: #34495E;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .game-main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin: 0;
+            color: var(--secondary-color);
+        }
+
+        .score-display {
+            font-size: 1.5em;
             font-weight: bold;
-            font-size: 1.25rem;
-            color: white;
-            transition: transform 0.2s ease-out, background-color 0.2s ease;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin: 10px 0;
+            color: var(--primary-color);
+        }
+
+        #gameCanvas {
+            border: 5px solid #2C3E50;
+            border-radius: 10px;
+            background-color: #ECF0F1;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+        
+        #nextElementCanvas {
+            width: 80px;
+            height: 80px;
+            border: 5px solid #2C3E50;
+            border-radius: 10px;
+            background-color: #ECF0F1;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        button#newGameBtn {
+            background-color: var(--secondary-color);
+            color: var(--dark-bg);
+        }
+
+        button#newGameBtn:hover {
+            background-color: #40C2A7;
+            transform: translateY(-2px);
+        }
+
+        #soundBtn {
+            width: 45px;
+            height: 45px;
+            background-color: #8E44AD;
+            color: var(--text-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #soundBtn:hover {
+            background-color: #9B59B6;
+        }
+
+        .molecule-book {
+            width: 300px;
+            background-color: #2C3E50;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            max-height: 70vh;
+        }
+
+        .molecule-book h2 {
+            margin-top: 0;
+            font-size: 1.5em;
+            color: var(--secondary-color);
+            text-align: center;
+        }
+
+        .molecule-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .molecule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #34495E;
+            transition: background-color 0.2s;
+        }
+        
+        .molecule-item:last-child {
+            border-bottom: none;
+        }
+
+        .molecule-item:hover {
+            background-color: #34495E;
+        }
+
+        .molecule-name {
+            font-weight: bold;
+        }
+
+        .molecule-symbol {
+            font-style: italic;
+            font-weight: normal;
+        }
+        
+        .tally {
+            background-color: #2C3E50;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(44, 62, 80, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        /* Merging Animation */
+        @keyframes merge-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .element-H { background-color: var(--element-H); color: #000; }
+        .element-O { background-color: var(--element-O); color: #fff; }
+        .element-C { background-color: var(--element-C); color: #fff; }
+        .element-N { background-color: var(--element-N); color: #fff; }
+        .element-Na { background-color: var(--element-Na); color: #fff; }
+        .element-Cl { background-color: var(--element-Cl); color: #fff; }
+        .element-S { background-color: var(--element-S); color: #000; }
+        .element-Ca { background-color: var(--element-Ca); color: #fff; }
+        .element-Fe { background-color: var(--element-Fe); color: #fff; }
+        .element-K { background-color: var(--element-K); color: #fff; }
+        .element-Mg { background-color: var(--element-Mg); color: #fff; }
+        .element-Al { background-color: var(--element-Al); color: #fff; }
+        .element-P { background-color: var(--element-P); color: #fff; }
+        .element-Si { background-color: var(--element-Si); color: #fff; }
+        .element-He { background-color: var(--element-He); color: #000; }
+        .element-Ne { background-color: var(--element-Ne); color: #000; }
+
+
+        @media (max-width: 768px) {
+            .game-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .molecule-book {
+                width: 100%;
+                max-height: 40vh;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useCallback, useRef } = React;
-        const { createRoot } = ReactDOM;
+<div class="game-container">
+    <!-- Molecule Book -->
+    <div class="molecule-book">
+        <h2>Molecule Book</h2>
+        <ul id="moleculeList" class="molecule-list">
+            <!-- Molecules will be dynamically added here -->
+        </ul>
+    </div>
 
-        // Define a simplified periodic table for merging
-        const MOLECULES = {
-            'H': { label: 'H', color: 'bg-gray-400', next: 'He', name: 'Hydrogen' },
-            'He': { label: 'He', color: 'bg-blue-400', next: 'Li', name: 'Helium' },
-            'Li': { label: 'Li', color: 'bg-yellow-400', next: 'Be', name: 'Lithium' },
-            'Be': { label: 'Be', color: 'bg-green-400', next: 'B', name: 'Beryllium' },
-            'B': { label: 'B', color: 'bg-orange-400', next: 'C', name: 'Boron' },
-            'C': { label: 'C', color: 'bg-red-400', next: 'N', name: 'Carbon' },
-            'N': { label: 'N', color: 'bg-purple-400', next: 'O', name: 'Nitrogen' },
-            'O': { label: 'O', color: 'bg-pink-400', next: 'F', name: 'Oxygen' },
-            'F': { label: 'F', color: 'bg-cyan-400', next: null, name: 'Fluorine' }
-        };
+    <!-- Game Main Area -->
+    <div class="game-main">
+        <div class="header">
+            <h1>Molecule Merge</h1>
+            <div id="scoreDisplay" class="score-display">Score: 0</div>
+        </div>
+        
+        <label for="nextElementCanvas" style="font-size:1.2em; font-weight:bold; margin-bottom: 5px;">Next:</label>
+        <canvas id="nextElementCanvas" width="80" height="80"></canvas>
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="controls">
+            <button id="newGameBtn">New Game</button>
+            <button id="soundBtn"><i class="fas fa-volume-up"></i></button>
+        </div>
+    </div>
+</div>
 
-        const GRID_WIDTH = 6;
-        const GRID_HEIGHT = 8;
+<div id="messageBox" class="message-box"></div>
 
-        const getNewMolecule = () => {
-            const keys = Object.keys(MOLECULES);
-            return keys[Math.floor(Math.random() * 2)]; // Randomly start with H or He
-        };
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
 
-        const App = () => {
-            const [currentView, setCurrentView] = useState('home');
-            const [gameMode, setGameMode] = useState('freeplay');
-            const [grid, setGrid] = useState([]);
-            const [nextMolecule, setNextMolecule] = useState(getNewMolecule());
-            const [score, setScore] = useState(0);
-            const [level, setLevel] = useState(1);
-            const [targetMolecule, setTargetMolecule] = useState('O');
-            const [isGameOver, setIsGameOver] = useState(false);
-            const [isModalOpen, setIsModalOpen] = useState(false);
-            const [modalMessage, setModalMessage] = useState('');
-            const [modalConfirmAction, setModalConfirmAction] = useState(null);
-            const [showSuccessModal, setShowSuccessModal] = useState(false);
+        // --- Game Setup ---
+        const gameCanvas = document.getElementById('gameCanvas');
+        const gameCtx = gameCanvas.getContext('2d');
+        const nextElementCanvas = document.getElementById('nextElementCanvas');
+        const nextElementCtx = nextElementCanvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const moleculeList = document.getElementById('moleculeList');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const soundBtn = document.getElementById('soundBtn');
+        const messageBox = document.getElementById('messageBox');
 
-            const initializeGrid = useCallback(() => {
-                const newGrid = Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(null));
-                setGrid(newGrid);
-                setIsGameOver(false);
-                setScore(0);
-                setLevel(1);
-                setNextMolecule(getNewMolecule());
-            }, []);
+        const GRID_ROWS = 5;
+        const GRID_COLS = 5;
+        const CELL_SIZE = 80;
+        const DROP_SPEED = 2; // Pixels per frame
+        const ANIMATION_DURATION = 500; // ms
 
-            // Function to apply gravity to the grid
-            const applyGravity = useCallback((currentGrid) => {
-                const newGrid = currentGrid.map(row => [...row]);
-                for (let x = 0; x < GRID_WIDTH; x++) {
-                    let writeIndex = GRID_HEIGHT - 1;
-                    for (let y = GRID_HEIGHT - 1; y >= 0; y--) {
-                        if (newGrid[y][x] !== null) {
-                            newGrid[writeIndex][x] = newGrid[y][x];
-                            if (writeIndex !== y) {
-                                newGrid[y][x] = null;
-                            }
-                            writeIndex--;
-                        }
+        gameCanvas.width = GRID_COLS * CELL_SIZE;
+        gameCanvas.height = GRID_ROWS * CELL_SIZE;
+
+        let grid = [];
+        let score = 0;
+        let activeElement = null;
+        let nextElement = null;
+        let dropColumn = -1;
+        let dropY = 0;
+        let isDropping = false;
+        let isMerging = false;
+        let soundOn = true;
+
+        // Web Audio API for simple sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let oscillator = null;
+
+        function playSound() {
+            if (!soundOn) return;
+            if (oscillator) {
+                oscillator.stop();
+                oscillator.disconnect();
+            }
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 440; // A4 note
+            oscillator.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1); // Play for 100ms
+        }
+
+        // Available Elements
+        const elements = [
+            { symbol: 'H', name: 'Hydrogen', color: 'var(--element-H)' },
+            { symbol: 'O', name: 'Oxygen', color: 'var(--element-O)' },
+            { symbol: 'C', name: 'Carbon', color: 'var(--element-C)' },
+            { symbol: 'N', name: 'Nitrogen', color: 'var(--element-N)' },
+            { symbol: 'S', name: 'Sulfur', color: 'var(--element-S)' },
+            { symbol: 'Cl', name: 'Chlorine', color: 'var(--element-Cl)' },
+            { symbol: 'Na', name: 'Sodium', color: 'var(--element-Na)' },
+            { symbol: 'P', name: 'Phosphorus', color: 'var(--element-P)' },
+            { symbol: 'K', name: 'Potassium', color: 'var(--element-K)' },
+            { symbol: 'Ca', name: 'Calcium', color: 'var(--element-Ca)' },
+            { symbol: 'Fe', name: 'Iron', color: 'var(--element-Fe)' },
+            { symbol: 'Mg', name: 'Magnesium', color: 'var(--element-Mg)' },
+            { symbol: 'Al', name: 'Aluminium', color: 'var(--element-Al)' },
+            { symbol: 'Si', name: 'Silicon', color: 'var(--element-Si)' },
+        ];
+
+        // 25 common, stable molecules
+        const molecules = [
+            { name: 'Water', formula: 'H₂O', elements: { 'H': 2, 'O': 1 }, points: 50 },
+            { name: 'Carbon Dioxide', formula: 'CO₂', elements: { 'C': 1, 'O': 2 }, points: 70 },
+            { name: 'Methane', formula: 'CH₄', elements: { 'C': 1, 'H': 4 }, points: 80 },
+            { name: 'Ammonia', formula: 'NH₃', elements: { 'N': 1, 'H': 3 }, points: 80 },
+            { name: 'Sulfuric Acid', formula: 'H₂SO₄', elements: { 'H': 2, 'S': 1, 'O': 4 }, points: 150 },
+            { name: 'Sodium Chloride', formula: 'NaCl', elements: { 'Na': 1, 'Cl': 1 }, points: 60 },
+            { name: 'Glucose', formula: 'C₆H₁₂O₆', elements: { 'C': 6, 'H': 12, 'O': 6 }, points: 300 },
+            { name: 'Hydrogen Peroxide', formula: 'H₂O₂', elements: { 'H': 2, 'O': 2 }, points: 70 },
+            { name: 'Baking Soda', formula: 'NaHCO₃', elements: { 'Na': 1, 'H': 1, 'C': 1, 'O': 3 }, points: 120 },
+            { name: 'Calcium Carbonate', formula: 'CaCO₃', elements: { 'Ca': 1, 'C': 1, 'O': 3 }, points: 140 },
+            { name: 'Ethanol', formula: 'C₂H₅OH', elements: { 'C': 2, 'H': 6, 'O': 1 }, points: 100 },
+            { name: 'Table Sugar', formula: 'C₁₂H₂₂O₁₁', elements: { 'C': 12, 'H': 22, 'O': 11 }, points: 500 },
+            { name: 'Nitrous Oxide', formula: 'N₂O', elements: { 'N': 2, 'O': 1 }, points: 90 },
+            { name: 'Acetone', formula: 'C₃H₆O', elements: { 'C': 3, 'H': 6, 'O': 1 }, points: 110 },
+            { name: 'Urea', formula: 'CH₄N₂O', elements: { 'C': 1, 'H': 4, 'N': 2, 'O': 1 }, points: 130 },
+            { name: 'Ozone', formula: 'O₃', elements: { 'O': 3 }, points: 40 },
+            { name: 'Limestone', formula: 'CaCO₃', elements: { 'Ca': 1, 'C': 1, 'O': 3 }, points: 140 }, // Same as Calcium Carbonate
+            { name: 'Hydrochloric Acid', formula: 'HCl', elements: { 'H': 1, 'Cl': 1 }, points: 50 },
+            { name: 'Acetic Acid', formula: 'C₂H₄O₂', elements: { 'C': 2, 'H': 4, 'O': 2 }, points: 90 },
+            { name: 'Ammonium Chloride', formula: 'NH₄Cl', elements: { 'N': 1, 'H': 4, 'Cl': 1 }, points: 110 },
+            { name: 'Magnesium Oxide', formula: 'MgO', elements: { 'Mg': 1, 'O': 1 }, points: 70 },
+            { name: 'Potassium Nitrate', formula: 'KNO₃', elements: { 'K': 1, 'N': 1, 'O': 3 }, points: 120 },
+            { name: 'Silica', formula: 'SiO₂', elements: { 'Si': 1, 'O': 2 }, points: 100 },
+            { name: 'Iron Oxide', formula: 'Fe₂O₃', elements: { 'Fe': 2, 'O': 3 }, points: 180 },
+            { name: 'Formaldehyde', formula: 'CH₂O', elements: { 'C': 1, 'H': 2, 'O': 1 }, points: 80 }
+        ];
+
+        let moleculeCounts = {};
+        molecules.forEach(mol => {
+            moleculeCounts[mol.formula] = 0;
+        });
+
+        // --- Game Functions ---
+        function initGame() {
+            grid = Array.from({ length: GRID_ROWS }, () =>
+                Array.from({ length: GRID_COLS }, () => null)
+            );
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            isDropping = false;
+            isMerging = false;
+            activeElement = null;
+            nextElement = null;
+            
+            molecules.forEach(mol => {
+                moleculeCounts[mol.formula] = 0;
+            });
+            updateMoleculeBook();
+
+            generateNextElement();
+            requestAnimationFrame(draw);
+        }
+
+        function updateMoleculeBook() {
+            moleculeList.innerHTML = '';
+            molecules.forEach(mol => {
+                const li = document.createElement('li');
+                li.className = 'molecule-item';
+                li.innerHTML = `
+                    <div class="molecule-info">
+                        <span class="molecule-name">${mol.name}</span>
+                        <span class="molecule-symbol">${mol.formula}</span>
+                    </div>
+                    <div class="tally" id="tally-${mol.formula}">${moleculeCounts[mol.formula]}</div>
+                `;
+                moleculeList.appendChild(li);
+            });
+        }
+        
+        function updateTally(formula) {
+            moleculeCounts[formula]++;
+            const tallyElement = document.getElementById(`tally-${formula}`);
+            if (tallyElement) {
+                tallyElement.textContent = moleculeCounts[formula];
+            }
+        }
+
+        function generateNextElement() {
+            const randomIndex = Math.floor(Math.random() * elements.length);
+            nextElement = { ...elements[randomIndex], y: 0 };
+            if (!activeElement) {
+                activeElement = nextElement;
+                generateNextElement();
+            }
+        }
+
+        function draw() {
+            // Clear game canvas
+            gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            
+            // Draw next element on its own canvas
+            drawNextElement();
+
+            // Draw grid
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    gameCtx.strokeStyle = '#BDC3C7';
+                    gameCtx.strokeRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                }
+            }
+
+            // Draw elements in the grid
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const element = grid[r][c];
+                    if (element) {
+                        drawElement(gameCtx, element.symbol, element.color, c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE);
                     }
                 }
-                return newGrid;
-            }, []);
+            }
 
-            // Function to check and perform merges
-            const processMerges = useCallback((currentGrid) => {
-                let merged = false;
-                let newGrid = currentGrid.map(row => [...row]);
-                const mergesFound = [];
+            // Draw active element falling from the top
+            if (isDropping && activeElement) {
+                const x = dropColumn * CELL_SIZE;
+                drawElement(gameCtx, activeElement.symbol, activeElement.color, x, dropY, CELL_SIZE);
+            }
+            
+            requestAnimationFrame(draw);
+        }
+        
+        function drawNextElement() {
+            nextElementCtx.clearRect(0, 0, nextElementCanvas.width, nextElementCanvas.height);
+            if (nextElement) {
+                const drawSize = nextElementCanvas.width;
+                drawElement(nextElementCtx, nextElement.symbol, nextElement.color, 0, 0, drawSize);
+            }
+        }
 
-                // Check horizontal merges
-                for (let y = 0; y < GRID_HEIGHT; y++) {
-                    for (let x = 0; x < GRID_WIDTH - 1; x++) {
-                        if (newGrid[y][x] && newGrid[y][x] === newGrid[y][x + 1]) {
-                            mergesFound.push({ y: y, x: x, type: 'horizontal', molecule: newGrid[y][x] });
-                        }
+        /**
+         * Resolves a CSS variable string to its corresponding hex color value.
+         * @param {string} varName The name of the CSS variable, e.g., 'var(--element-H)'.
+         * @returns {string} The resolved hex color string, e.g., '#B3E5FC'.
+         */
+        function resolveCssVar(varName) {
+            if (varName.startsWith('var(')) {
+                return getComputedStyle(document.documentElement).getPropertyValue(varName.match(/--[\w-]+/)[0]).trim();
+            }
+            return varName;
+        }
+
+        function drawElement(ctx, symbol, color, x, y, size) {
+            // Resolve the color from the CSS variable before using it with Canvas
+            const resolvedColor = resolveCssVar(color);
+            ctx.beginPath();
+            ctx.arc(x + size / 2, y + size / 2, size / 2 - 5, 0, 2 * Math.PI);
+            ctx.fillStyle = resolvedColor;
+            ctx.fill();
+            ctx.closePath();
+            
+            ctx.fillStyle = getContrastYIQ(color);
+            ctx.font = '24px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x + size / 2, y + size / 2);
+        }
+        
+        function getContrastYIQ(hexcolor) {
+            if (hexcolor.startsWith('var(')) {
+                hexcolor = getComputedStyle(document.documentElement).getPropertyValue(hexcolor.match(/--[\w-]+/)[0]).trim();
+            }
+            const r = parseInt(hexcolor.substr(1, 2), 16);
+            const g = parseInt(hexcolor.substr(3, 2), 16);
+            const b = parseInt(hexcolor.substr(5, 2), 16);
+            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return (yiq >= 128) ? 'black' : 'white';
+        }
+
+        function dropElement(col) {
+            if (isDropping || isMerging) return;
+            if (grid[0][col] !== null) {
+                showMessage('Column is full!');
+                return;
+            }
+
+            isDropping = true;
+            dropColumn = col;
+            dropY = -CELL_SIZE;
+            
+            function animateDrop() {
+                if (isDropping) {
+                    dropY += DROP_SPEED * 5; // Faster drop
+                    const targetY = findDropRow(col) * CELL_SIZE;
+
+                    if (dropY >= targetY) {
+                        isDropping = false;
+                        const row = findDropRow(col);
+                        grid[row][col] = activeElement;
+                        activeElement = null;
+                        
+                        setTimeout(() => {
+                            checkMerges();
+                        }, 100);
+                    } else {
+                        requestAnimationFrame(animateDrop);
                     }
                 }
+            }
+            requestAnimationFrame(animateDrop);
+        }
+        
+        function findDropRow(col) {
+            for (let r = GRID_ROWS - 1; r >= 0; r--) {
+                if (grid[r][col] === null) {
+                    return r;
+                }
+            }
+            return -1; // Should not happen if check is done
+        }
 
-                // Check vertical merges
-                for (let y = 0; y < GRID_HEIGHT - 1; y++) {
-                    for (let x = 0; x < GRID_WIDTH; x++) {
-                        if (newGrid[y][x] && newGrid[y][x] === newGrid[y + 1][x]) {
-                            mergesFound.push({ y: y, x: x, type: 'vertical', molecule: newGrid[y][x] });
-                        }
+        function checkMerges() {
+            isMerging = true;
+            let mergedThisTurn = false;
+            
+            let allFoundGroups = [];
+            const visited = new Set();
+            
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    if (grid[r][c] && !visited.has(`${r},${c}`)) {
+                        const group = findConnectedGroup(r, c);
+                        allFoundGroups.push(group);
+                        group.forEach(pos => visited.add(`${pos.r},${pos.c}`));
                     }
                 }
-                
-                // Perform merges
-                if (mergesFound.length > 0) {
-                    merged = true;
-                    mergesFound.forEach(merge => {
-                        const nextMolecule = MOLECULES[merge.molecule].next;
-                        if (nextMolecule) {
-                            if (merge.type === 'horizontal') {
-                                newGrid[merge.y][merge.x] = nextMolecule;
-                                newGrid[merge.y][merge.x + 1] = null;
-                            } else { // vertical
-                                newGrid[merge.y][merge.x] = nextMolecule;
-                                newGrid[merge.y + 1][merge.x] = null;
-                            }
-                            setScore(prev => prev + 50 * level);
-                            // Check for level completion
-                            if (gameMode === 'levelplay' && nextMolecule === targetMolecule) {
-                                setShowSuccessModal(true);
-                                setLevel(prev => prev + 1);
-                                setTargetMolecule(MOLECULES[targetMolecule].next || targetMolecule);
-                            }
+            }
+
+            // Check if any group matches a molecule
+            for (const group of allFoundGroups) {
+                const elementsInGroup = group.reduce((counts, pos) => {
+                    const symbol = grid[pos.r][pos.c].symbol;
+                    counts[symbol] = (counts[symbol] || 0) + 1;
+                    return counts;
+                }, {});
+
+                for (const mol of molecules) {
+                    const molElements = mol.elements;
+                    let match = true;
+                    // Check if group elements match molecule elements
+                    for (const symbol in molElements) {
+                        if (elementsInGroup[symbol] !== molElements[symbol]) {
+                            match = false;
+                            break;
                         }
-                    });
-                }
+                    }
+                    // Check for extra elements in the group
+                    for (const symbol in elementsInGroup) {
+                        if (elementsInGroup[symbol] !== molElements[symbol]) {
+                            match = false;
+                            break;
+                        }
+                    }
 
-                if (merged) {
-                    newGrid = applyGravity(newGrid);
-                    return processMerges(newGrid); // Recursively check for chain reactions
-                }
-
-                return newGrid;
-            }, [level, gameMode, targetMolecule, applyGravity]);
-
-            const findLowestSpot = useCallback((x, grid) => {
-                for (let y = GRID_HEIGHT - 1; y >= 0; y--) {
-                    if (grid[y][x] === null) {
-                        return y;
+                    if (match) {
+                        mergeElements(group, mol);
+                        mergedThisTurn = true;
+                        break;
                     }
                 }
-                return -1;
-            }, []);
-
-            const placeMolecule = useCallback((x) => {
-                const y = findLowestSpot(x, grid);
-                
-                if (y === -1) {
-                    setIsGameOver(true);
-                    return;
-                }
-                
-                let newGrid = grid.map(row => [...row]);
-                newGrid[y][x] = nextMolecule;
-
-                setNextMolecule(getNewMolecule());
-
-                newGrid = applyGravity(newGrid);
-                newGrid = processMerges(newGrid);
-                
-                setGrid(newGrid);
-            }, [grid, nextMolecule, findLowestSpot, applyGravity, processMerges]);
-
-            const handleKeyDown = useCallback((e) => {
-                if (isGameOver || currentView !== 'game') return;
-                const dropColumn = parseInt(e.key, 10) - 1;
-                if (!isNaN(dropColumn) && dropColumn >= 0 && dropColumn < GRID_WIDTH) {
-                    placeMolecule(dropColumn);
-                }
-            }, [isGameOver, currentView, placeMolecule]);
-
-            const handleClickDrop = useCallback((x) => {
-                if (isGameOver || currentView !== 'game') return;
-                placeMolecule(x);
-            }, [isGameOver, currentView, placeMolecule]);
-
-            useEffect(() => {
-                if (currentView === 'game') {
-                    window.addEventListener('keydown', handleKeyDown);
-                    return () => {
-                        window.removeEventListener('keydown', handleKeyDown);
-                    };
-                }
-            }, [handleKeyDown, currentView]);
-
-            const handleModeSwitch = (mode) => {
-                if (score > 0) {
-                    setModalMessage(`Your current progress will be lost. Are you sure you want to switch to ${mode} mode?`);
-                    setModalConfirmAction(() => () => {
-                        setGameMode(mode);
-                        setCurrentView('game');
-                        setIsModalOpen(false);
-                        initializeGrid();
-                    });
-                    setIsModalOpen(true);
+            }
+            
+            if (mergedThisTurn) {
+                setTimeout(() => {
+                    checkMerges();
+                }, ANIMATION_DURATION + 100); // Re-check after animation
+            } else {
+                isMerging = false;
+                if (isGameOver()) {
+                    showMessage('Game Over!');
+                    newGameBtn.textContent = 'Play Again';
                 } else {
-                    setGameMode(mode);
-                    setCurrentView('game');
-                    initializeGrid();
+                    generateNextElement();
                 }
-            };
+            }
+        }
 
-            const renderGrid = () => (
-                <div className="flex flex-col items-center">
-                    <div className="grid grid-cols-6 gap-1 p-2 bg-gray-900 rounded-lg shadow-xl mb-4 border-4 border-gray-800">
-                        {Array.from({ length: GRID_WIDTH }).map((_, x) => (
-                            <button
-                                key={`drop-${x}`}
-                                onClick={() => handleClickDrop(x)}
-                                className="w-12 h-8 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
-                            >
-                                <i className="fas fa-arrow-down"></i>
-                            </button>
-                        ))}
-                    </div>
-                    <div className="grid border-4 border-gray-800 rounded-lg overflow-hidden bg-gray-900 shadow-xl"
-                        style={{ gridTemplateColumns: `repeat(${GRID_WIDTH}, 1fr)` }}>
-                        {grid.flat().map((molecule, index) => (
-                            <div
-                                key={index}
-                                className={`molecule-grid-cell ${molecule ? MOLECULES[molecule].color : 'bg-transparent'}`}
-                            >
-                                {molecule ? MOLECULES[molecule].label : ''}
-                            </div>
-                        ))}
-                    </div>
-                    {isGameOver && (
-                        <div className="absolute inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center rounded-lg text-white text-center p-4">
-                            <h2 className="text-5xl font-bold mb-4">Game Over!</h2>
-                            <p className="text-2xl mb-6">Final Score: {score}</p>
-                            <button
-                                onClick={() => initializeGrid()}
-                                className="px-6 py-3 bg-red-600 text-white font-bold rounded-full transition-transform transform hover:scale-105 shadow-lg"
-                            >
-                                Play Again
-                            </button>
-                        </div>
-                    )}
-                </div>
-            );
+        function findConnectedGroup(startR, startC) {
+            const group = [];
+            const queue = [{ r: startR, c: startC }];
+            const visited = new Set();
+            visited.add(`${startR},${startC}`);
 
-            const renderHomePage = () => (
-                <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 font-sans">
-                    <h1 className="text-5xl font-bold mb-6 text-gray-800 drop-shadow-lg">Molecule Merge</h1>
-                    <div className="w-full max-w-xl p-8 bg-white rounded-lg shadow-xl border-2 border-gray-200 text-center">
-                        <h2 className="text-3xl font-bold mb-4 text-gray-700">How to Play</h2>
-                        <ul className="list-disc list-inside text-left text-gray-600 space-y-2 mb-8">
-                            <li>Click the **down arrow** buttons or use keyboard keys **1-6** to drop molecules into the column of your choice.</li>
-                            <li>When two identical molecules touch, they will merge into the next one on the periodic table.</li>
-                            <li>The game ends if a column overflows.</li>
-                            <li>In **Level Mode**, you must create the target molecule to advance.</li>
-                            <li>In **Free Play**, the game continues indefinitely.</li>
-                        </ul>
-                        <div className="flex justify-center space-x-4">
-                            <button
-                                onClick={() => handleModeSwitch('freeplay')}
-                                className="px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 bg-indigo-600 text-white shadow-lg hover:bg-indigo-700"
-                            >
-                                Start Free Play
-                            </button>
-                            <button
-                                onClick={() => handleModeSwitch('levelplay')}
-                                className="px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 bg-emerald-600 text-white shadow-lg hover:bg-emerald-700"
-                            >
-                                Start Level Play
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
+            while (queue.length > 0) {
+                const { r, c } = queue.shift();
+                group.push({ r, c });
 
-            const renderGameView = () => (
-                <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100 font-sans">
-                    <h1 className="text-4xl font-bold mb-6 text-gray-800 drop-shadow-lg">Molecule Merge</h1>
-                    <div className="flex space-x-4 mb-8">
-                        <button
-                            onClick={() => handleModeSwitch('freeplay')}
-                            className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 ${gameMode === 'freeplay' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-indigo-300 text-indigo-800 hover:bg-indigo-400'}`}
-                        >
-                            Free Play
-                        </button>
-                        <button
-                            onClick={() => handleModeSwitch('levelplay')}
-                            className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 ${gameMode === 'levelplay' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-emerald-300 text-emerald-800 hover:bg-emerald-400'}`}
-                        >
-                            Level Play
-                        </button>
-                        <button
-                            onClick={() => setCurrentView('home')}
-                            className="px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 bg-gray-400 text-gray-800 hover:bg-gray-500"
-                        >
-                            Home
-                        </button>
-                    </div>
+                const neighbors = [
+                    { r: r - 1, c: c },
+                    { r: r + 1, c: c },
+                    { r: r, c: c - 1 },
+                    { r: r, c: c + 1 },
+                ];
 
-                    <div className="flex items-start space-x-8">
-                        <div className="relative">
-                            {renderGrid()}
-                        </div>
-                        <div className="w-56 p-6 bg-white rounded-lg shadow-lg border-2 border-gray-200">
-                            <div className="text-xl font-bold text-center text-gray-700 mb-4">Game Stats</div>
-                            <div className="space-y-3">
-                                <p className="flex justify-between text-lg">
-                                    <span className="font-semibold text-gray-600">Score:</span>
-                                    <span className="font-bold text-gray-800">{score}</span>
-                                </p>
-                                {gameMode === 'levelplay' && (
-                                    <>
-                                        <p className="flex justify-between text-lg">
-                                            <span className="font-semibold text-gray-600">Level:</span>
-                                            <span className="font-bold text-gray-800">{level}</span>
-                                        </p>
-                                        <p className="flex justify-between text-lg">
-                                            <span className="font-semibold text-gray-600">Target:</span>
-                                            <span className={`font-bold text-gray-800 ${MOLECULES[targetMolecule].color} px-2 rounded`}>{MOLECULES[targetMolecule].label}</span>
-                                        </p>
-                                    </>
-                                )}
-                            </div>
-                            <div className="mt-6">
-                                <h3 className="text-xl font-bold text-center text-gray-700 mb-3">Next Element</h3>
-                                <div className="p-2 border border-gray-300 rounded-md bg-gray-100 flex items-center justify-center">
-                                    {nextMolecule && (
-                                        <div
-                                            className={`w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold text-white ${MOLECULES[nextMolecule].color}`}
-                                        >
-                                            {MOLECULES[nextMolecule].label}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {isModalOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                            <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm">
-                                <h3 className="text-2xl font-bold mb-4 text-gray-800">Confirm Action</h3>
-                                <p className="text-lg text-gray-600 mb-6">{modalMessage}</p>
-                                <div className="flex justify-center space-x-4">
-                                    <button
-                                        onClick={modalConfirmAction}
-                                        className="px-6 py-3 bg-red-500 text-white font-semibold rounded-full hover:bg-red-600 transition-colors shadow"
-                                    >
-                                        Yes
-                                    </button>
-                                    <button
-                                        onClick={() => setIsModalOpen(false)}
-                                        className="px-6 py-3 bg-gray-300 text-gray-800 font-semibold rounded-full hover:bg-gray-400 transition-colors shadow"
-                                    >
-                                        No
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {showSuccessModal && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                            <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-sm">
-                                <h3 className="text-3xl font-bold mb-4 text-green-600">Level Complete! 🎉</h3>
-                                <p className="text-lg text-gray-600 mb-6">
-                                    You successfully created {MOLECULES[targetMolecule].name}! You are now on Level {level + 1}.
-                                </p>
-                                <button
-                                    onClick={() => setShowSuccessModal(false)}
-                                    className="px-6 py-3 bg-green-500 text-white font-semibold rounded-full hover:bg-green-600 transition-colors shadow"
-                                >
-                                    Continue
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
+                for (const neighbor of neighbors) {
+                    const { r: nextR, c: nextC } = neighbor;
+                    if (nextR >= 0 && nextR < GRID_ROWS && nextC >= 0 && nextC < GRID_COLS &&
+                        grid[nextR][nextC] !== null && !visited.has(`${nextR},${nextC}`)) {
+                        visited.add(`${nextR},${nextC}`);
+                        queue.push(neighbor);
+                    }
+                }
+            }
+            return group;
+        }
 
-            return (
-                <>
-                    {currentView === 'home' && renderHomePage()}
-                    {currentView === 'game' && renderGameView()}
-                </>
-            );
-        };
+        function mergeElements(group, molecule) {
+            showMessage(`Merged: ${molecule.formula} (${molecule.name})! +${molecule.points}`);
+            updateScore(molecule.points);
+            updateTally(molecule.formula);
+            playSound();
+            
+            // Animation for merging
+            const centerR = group.reduce((sum, p) => sum + p.r, 0) / group.length;
+            const centerC = group.reduce((sum, p) => sum + p.c, 0) / group.length;
+            
+            for (const pos of group) {
+                const element = grid[pos.r][pos.c];
+                if (element) {
+                    const startX = pos.c * CELL_SIZE;
+                    const startY = pos.r * CELL_SIZE;
+                    const endX = centerC * CELL_SIZE;
+                    const endY = centerR * CELL_SIZE;
+                    
+                    animateMerge(element, startX, startY, endX, endY);
+                }
+                grid[pos.r][pos.c] = null;
+            }
+        }
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(React.createElement(App));
-    </script>
+        function animateMerge(element, startX, startY, endX, endY) {
+            const startTime = Date.now();
+            function animate() {
+                const elapsedTime = Date.now() - startTime;
+                const progress = Math.min(elapsedTime / ANIMATION_DURATION, 1);
+                
+                const currentX = startX + (endX - startX) * progress;
+                const currentY = startY + (endY - startY) * progress;
+                
+                // Draw a temporary element for the animation
+                gameCtx.clearRect(currentX - 1, currentY - 1, CELL_SIZE + 2, CELL_SIZE + 2);
+                drawElement(gameCtx, element.symbol, element.color, currentX, currentY, CELL_SIZE);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function updateScore(points) {
+            score += points;
+            scoreDisplay.textContent = `Score: ${score}`;
+        }
+        
+        function isGameOver() {
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (grid[0][c] !== null) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        function showMessage(msg) {
+            messageBox.textContent = msg;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 1500);
+        }
+
+        // --- Event Listeners ---
+        gameCanvas.addEventListener('click', (event) => {
+            if (isDropping || isMerging || isGameOver()) return;
+            const rect = gameCanvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const col = Math.floor(x / CELL_SIZE);
+            
+            if (col >= 0 && col < GRID_COLS) {
+                activeElement = nextElement;
+                nextElement = null; // Clear next element for a fresh one
+                dropElement(col);
+                generateNextElement();
+            }
+        });
+        
+        newGameBtn.addEventListener('click', () => {
+            initGame();
+            newGameBtn.textContent = 'New Game';
+        });
+
+        soundBtn.addEventListener('click', () => {
+            soundOn = !soundOn;
+            const icon = soundBtn.querySelector('i');
+            icon.className = soundOn ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+        });
+
+        // Start the game
+        initGame();
+    });
+</script>
+
 </body>
 </html>
-
