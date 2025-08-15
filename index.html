@@ -428,8 +428,8 @@
         let isDropping = false;
         let isMerging = false;
         let soundOn = true;
-        let animatingElements = []; // New array to manage animations
-        let highlightedGroups = []; // Array to store coordinates of highlighted merge groups
+        let animatingElements = [];
+        let highlightedGroups = [];
 
         // Web Audio API for simple sound effects
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -443,8 +443,6 @@
             oscillator.stop(audioContext.currentTime + duration);
         }
         
-        // List of 15 stable, common molecules with 4 or fewer total atoms
-        // Ordered by points, then by name for display in the book.
         const molecules = [
             // 2-Atom Molecules (25 points)
             { name: 'Carbon Monoxide', formula: 'CO', elements: { 'C': 1, 'O': 1 }, points: 25 },
@@ -486,7 +484,6 @@
             { symbol: 'F', name: 'Fluorine', color: 'var(--element-F)', weight: 1 },
         ];
 
-        // Get a list of all unique element symbols from the molecules array
         const availableSymbols = new Set();
         molecules.forEach(mol => {
             Object.keys(mol.elements).forEach(symbol => {
@@ -494,13 +491,11 @@
             });
         });
 
-        // Filter the drop elements to only include those in the molecule list
         const dropElements = baseElements.filter(el => availableSymbols.has(el.symbol));
 
-        // Add the special elements to the element pool
         const specialElements = [
-            { symbol: '💣', name: 'Bomb', color: 'var(--special-bomb)', isSpecial: true },
-            { symbol: '?', name: 'Wildcard', color: 'var(--special-wildcard)', isSpecial: true },
+            { symbol: '💣', name: 'Bomb', color: 'var(--special-bomb)', isSpecial: true, type: 'bomb' },
+            { symbol: '?', name: 'Wildcard', color: 'var(--special-wildcard)', isSpecial: true, type: 'wildcard' },
         ];
 
         let moleculeCounts = {};
@@ -508,7 +503,6 @@
             moleculeCounts[mol.formula] = 0;
         });
 
-        // Sort molecules by atom count descending for priority in merging
         const sortedMolecules = [...molecules].sort((a, b) => {
             const atomCountA = Object.values(a.elements).reduce((sum, val) => sum + val, 0);
             const atomCountB = Object.values(b.elements).reduce((sum, val) => sum + val, 0);
@@ -591,7 +585,7 @@
                     break;
                 }
             }
-            return selectedElement;
+            return { ...selectedElement, isSpecial: false };
         }
 
         function generateNextElement() {
@@ -617,17 +611,10 @@
             
             drawNextElement();
 
-            // Draw grid
             for (let r = 0; r < GRID_ROWS; r++) {
                 for (let c = 0; c < GRID_COLS; c++) {
                     gameCtx.strokeStyle = '#BDC3C7';
                     gameCtx.strokeRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                }
-            }
-
-            // Draw elements in the grid
-            for (let r = 0; r < GRID_ROWS; r++) {
-                for (let c = 0; c < GRID_COLS; c++) {
                     const element = grid[r][c];
                     if (element) {
                         drawElement(gameCtx, element.symbol, element.color, c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE);
@@ -635,20 +622,17 @@
                 }
             }
 
-            // Draw highlighted groups
             highlightedGroups.forEach(group => {
                 group.forEach(pos => {
                     drawHighlight(gameCtx, pos.c * CELL_SIZE, pos.r * CELL_SIZE, CELL_SIZE);
                 });
             });
             
-            // Draw active element falling from the top
             if (isDropping && activeElement) {
                 const x = dropColumn * CELL_SIZE;
                 drawElement(gameCtx, activeElement.symbol, activeElement.color, x, dropY, CELL_SIZE);
             }
 
-            // Draw animating elements
             const now = Date.now();
             animatingElements = animatingElements.filter(anim => {
                 const progress = Math.min((now - anim.startTime) / ANIMATION_DURATION, 1);
@@ -658,11 +642,11 @@
                 const currentOpacity = 1 - progress;
 
                 gameCtx.save();
-                ctx.globalAlpha = currentOpacity;
+                gameCtx.globalAlpha = currentOpacity;
                 drawElement(gameCtx, anim.symbol, anim.color, currentX, currentY, CELL_SIZE);
                 gameCtx.restore();
 
-                return progress < 1; // Keep animating if not finished
+                return progress < 1;
             });
             
             requestAnimationFrame(draw);
@@ -676,11 +660,6 @@
             }
         }
 
-        /**
-         * Resolves a CSS variable string to its corresponding hex color value.
-         * @param {string} varName The name of the CSS variable, e.g., 'var(--element-H)'.
-         * @returns {string} The resolved hex color string, e.g., '#B3E5FC'.
-         */
         function resolveCssVar(varName) {
             if (varName.startsWith('var(')) {
                 return getComputedStyle(document.documentElement).getPropertyValue(varName.match(/--[\w-]+/)[0]).trim();
@@ -689,7 +668,6 @@
         }
 
         function drawElement(ctx, symbol, color, x, y, size) {
-            // Resolve the color from the CSS variable before using it with Canvas
             const resolvedColor = resolveCssVar(color);
             ctx.beginPath();
             ctx.arc(x + size / 2, y + size / 2, size / 2 - 5, 0, 2 * Math.PI);
@@ -706,7 +684,7 @@
         
         function drawHighlight(ctx, x, y, size) {
             ctx.save();
-            ctx.strokeStyle = '#50E3C2'; // secondary-color for the glow
+            ctx.strokeStyle = '#50E3C2';
             ctx.lineWidth = 3;
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#50E3C2';
@@ -729,8 +707,7 @@
 
         function dropElement(col) {
             if (isDropping || isMerging) return;
-            // Clear any old highlights before a new drop
-            highlightedGroups = []; 
+            clearHighlights();
             if (grid[0][col] !== null) {
                 showMessage('Column is full! Game over.');
                 return;
@@ -749,17 +726,15 @@
                     isDropping = false;
                     const row = findDropRow(col);
                     
-                    if (activeElement.symbol === '💣') {
-                        // Bomb logic: clear the entire column
+                    if (activeElement.type === 'bomb') {
                         for (let r = 0; r < GRID_ROWS; r++) {
                             if (grid[r][col] !== null) {
-                                // Add a quick animation for each removed element
                                 animatingElements.push({
                                     ...grid[r][col],
                                     startX: col * CELL_SIZE,
                                     startY: r * CELL_SIZE,
                                     endX: col * CELL_SIZE,
-                                    endY: (row + 1) * CELL_SIZE, // Animate downwards
+                                    endY: (row + 1) * CELL_SIZE,
                                     startTime: Date.now()
                                 });
                                 grid[r][col] = null;
@@ -768,25 +743,19 @@
                         showMessage('BOOM! Column cleared!');
                         playSound(100);
                         activeElement = null;
-                        setTimeout(() => {
-                            checkMerges();
-                        }, ANIMATION_DURATION + 100);
-                    } else if (activeElement.symbol === '?') {
-                        // Wildcard logic: becomes a random element
-                        grid[row][col] = getRandomRegularElement();
+                        setTimeout(processTurn, ANIMATION_DURATION + 100);
+
+                    } else if (activeElement.type === 'wildcard') {
+                        const randomElement = getRandomRegularElement();
+                        grid[row][col] = randomElement;
                         showMessage('Wildcard activated!');
                         playSound(550);
                         activeElement = null;
-                        setTimeout(() => {
-                            checkMerges();
-                        }, 100);
+                        setTimeout(processTurn, 100);
                     } else {
-                        // Normal element drop
                         grid[row][col] = activeElement;
                         activeElement = null;
-                        setTimeout(() => {
-                            checkMerges();
-                        }, 100);
+                        setTimeout(processTurn, 100);
                     }
                     
                 } else {
@@ -796,19 +765,27 @@
             requestAnimationFrame(animateDrop);
         }
         
+        function processTurn() {
+            if (isGameOver()) {
+                showMessage('Column is full! Game over.');
+                newGameBtn.textContent = 'Play Again';
+            } else {
+                checkAndMerge();
+            }
+        }
+
         function findDropRow(col) {
             for (let r = GRID_ROWS - 1; r >= 0; r--) {
                 if (grid[r][col] === null) {
                     return r;
                 }
             }
-            return -1; // Should not happen if check is done
+            return -1;
         }
-
-        function checkMerges() {
+        
+        function checkAndMerge() {
             isMerging = true;
-            let mergedThisTurn = false;
-            
+            const mergesFound = [];
             const visited = new Set();
             
             for (let r = 0; r < GRID_ROWS; r++) {
@@ -823,12 +800,10 @@
                             return counts;
                         }, {});
 
-                        // Check for merges starting with the largest molecules
                         for (const mol of sortedMolecules) {
                             let match = true;
                             let atomsToConsume = {};
                             
-                            // Check if the group has enough elements to form this molecule
                             for (const symbol in mol.elements) {
                                 if (groupElements[symbol] === undefined || groupElements[symbol] < mol.elements[symbol]) {
                                     match = false;
@@ -838,27 +813,76 @@
                             }
                             
                             if (match) {
-                                // We found a match, so perform the merge
-                                mergeElements(group, atomsToConsume, mol);
-                                mergedThisTurn = true;
-                                break; // Stop after the first (largest) molecule match
+                                mergesFound.push({ group, atomsToConsume, molecule: mol });
+                                break;
                             }
                         }
                     }
                 }
             }
-            
-            if (mergedThisTurn) {
+
+            if (mergesFound.length > 0) {
+                // Combine elements to remove from all merges to handle overlaps
+                const elementsToRemove = new Set();
+                const totalPoints = mergesFound.reduce((sum, merge) => {
+                    const centerR = merge.group.reduce((sum, p) => sum + p.r, 0) / merge.group.length;
+                    const centerC = merge.group.reduce((sum, p) => sum + p.c, 0) / merge.group.length;
+
+                    const consumedSymbols = { ...merge.atomsToConsume };
+                    for (const pos of merge.group) {
+                        const element = grid[pos.r][pos.c];
+                        if (element && consumedSymbols[element.symbol] > 0) {
+                             if (!elementsToRemove.has(`${pos.r},${pos.c}`)) {
+                                elementsToRemove.add(`${pos.r},${pos.c}`);
+                                // Animate the removed element
+                                animatingElements.push({
+                                    ...element,
+                                    startX: pos.c * CELL_SIZE,
+                                    startY: pos.r * CELL_SIZE,
+                                    endX: centerC * CELL_SIZE,
+                                    endY: centerR * CELL_SIZE,
+                                    startTime: Date.now()
+                                });
+                            }
+                            consumedSymbols[element.symbol]--;
+                        }
+                    }
+                    showMessage(`Merged: ${merge.molecule.formula} (${merge.molecule.name})! +${merge.molecule.points}`);
+                    updateTally(merge.molecule.formula);
+                    playSound(440);
+                    return sum + merge.molecule.points;
+                }, 0);
+                
+                updateScore(totalPoints);
+                
+                // Clear all removed elements from the grid
+                elementsToRemove.forEach(posStr => {
+                    const [r, c] = posStr.split(',').map(Number);
+                    grid[r][c] = null;
+                });
+                
+                // Wait for gravity to settle and check for new merges
                 setTimeout(() => {
-                    checkMerges(); // Re-check after animation
+                    applyGravity();
+                    checkAndMerge();
                 }, ANIMATION_DURATION + 100);
+
             } else {
                 isMerging = false;
-                if (isGameOver()) {
-                    showMessage('Column is full! Game over.');
-                    newGameBtn.textContent = 'Play Again';
-                } else {
-                    generateNextElement();
+                generateNextElement();
+            }
+        }
+        
+        function applyGravity() {
+            for (let c = 0; c < GRID_COLS; c++) {
+                let emptyRow = GRID_ROWS - 1;
+                for (let r = GRID_ROWS - 1; r >= 0; r--) {
+                    if (grid[r][c] !== null) {
+                        const element = grid[r][c];
+                        grid[r][c] = null;
+                        grid[emptyRow][c] = element;
+                        emptyRow--;
+                    }
                 }
             }
         }
@@ -874,10 +898,8 @@
                 group.push({ r, c });
 
                 const neighbors = [
-                    { r: r - 1, c: c },
-                    { r: r + 1, c: c },
-                    { r: r, c: c - 1 },
-                    { r: r, c: c + 1 },
+                    { r: r - 1, c: c }, { r: r + 1, c: c },
+                    { r: r, c: c - 1 }, { r: r, c: c + 1 },
                 ];
 
                 for (const neighbor of neighbors) {
@@ -890,75 +912,6 @@
                 }
             }
             return group;
-        }
-
-        function mergeElements(group, atomsToConsume, molecule) {
-            showMessage(`Merged: ${molecule.formula} (${molecule.name})! +${molecule.points}`);
-            updateScore(molecule.points);
-            updateTally(molecule.formula);
-            playSound(440);
-            
-            const centerR = group.reduce((sum, p) => sum + p.r, 0) / group.length;
-            const centerC = group.reduce((sum, p) => sum + p.c, 0) / group.length;
-            
-            const elementsToRemove = [];
-            const remainingElements = [];
-
-            // Identify which elements to remove and which to keep
-            const tempGrid = JSON.parse(JSON.stringify(grid));
-            const consumedSymbols = { ...atomsToConsume };
-
-            for (const pos of group) {
-                const element = tempGrid[pos.r][pos.c];
-                if (element && consumedSymbols[element.symbol] > 0) {
-                    elementsToRemove.push(pos);
-                    consumedSymbols[element.symbol]--;
-                } else {
-                    remainingElements.push(pos);
-                }
-            }
-            
-            // Animate and remove the elements that form the molecule
-            elementsToRemove.forEach(pos => {
-                const element = grid[pos.r][pos.c];
-                animatingElements.push({
-                    ...element,
-                    startX: pos.c * CELL_SIZE,
-                    startY: pos.r * CELL_SIZE,
-                    endX: centerC * CELL_SIZE,
-                    endY: centerR * CELL_SIZE,
-                    startTime: Date.now()
-                });
-                grid[pos.r][pos.c] = null;
-            });
-
-            // Re-apply the remaining elements to the grid
-            const newGrid = Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(null));
-            remainingElements.forEach(pos => {
-                newGrid[pos.r][pos.c] = grid[pos.r][pos.c];
-                grid[pos.r][pos.c] = null;
-            });
-            
-            // Gravity effect for remaining elements
-            for (let c = 0; c < GRID_COLS; c++) {
-                let emptyRow = GRID_ROWS - 1;
-                for (let r = GRID_ROWS - 1; r >= 0; r--) {
-                    if (newGrid[r][c] !== null) {
-                        grid[emptyRow][c] = newGrid[r][c];
-                        if (emptyRow !== r) {
-                            animatingElements.push({
-                                ...grid[emptyRow][c],
-                                startX: c * CELL_SIZE,
-                                startY: r * CELL_SIZE,
-                                endX: c * CELL_SIZE,
-                                endY: emptyRow * CELL_SIZE,
-                                startTime: Date.now()
-                            });
-                        }
-                        emptyRow--;
-                    }
-                }
-            }
         }
 
         function updateScore(points) {
@@ -1001,14 +954,14 @@
         // --- Event Listeners ---
         gameCanvas.addEventListener('click', (event) => {
             if (isDropping || isMerging || isGameOver()) return;
-            clearHighlights(); // Clear highlights on new drop
+            clearHighlights();
             const rect = gameCanvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const col = Math.floor(x / CELL_SIZE);
             
             if (col >= 0 && col < GRID_COLS) {
                 activeElement = nextElement;
-                nextElement = null; // Clear next element for a fresh one
+                nextElement = null;
                 dropElement(col);
             }
         });
@@ -1033,7 +986,6 @@
                         }
                     }
 
-                    // Check if any found group can form the clicked molecule's formula
                     for (const group of allGroups) {
                         const elementsInGroup = group.reduce((counts, pos) => {
                             const symbol = grid[pos.r][pos.c].symbol;
@@ -1081,7 +1033,6 @@
             icon.className = soundOn ? 'fas fa-volume-up' : 'fas fa-volume-mute';
         });
 
-        // Start the game
         initGame();
         requestAnimationFrame(draw);
     });
