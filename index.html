@@ -170,7 +170,6 @@
     <canvas id="game-canvas"></canvas>
     <div class="controls" id="controls">
         <button class="game-btn" id="rules-button">Rules</button>
-        <div id="column-buttons"></div>
     </div>
 </div>
 
@@ -306,7 +305,6 @@
     // DOM elements
     const levelDisplay = document.getElementById('level');
     const targetMoleculeDisplay = document.getElementById('target-molecule');
-    const columnButtonsContainer = document.getElementById('column-buttons');
     const rulesButton = document.getElementById('rules-button');
     const gameModal = document.getElementById('gameModal');
     const modalTitle = document.getElementById('modal-title');
@@ -328,24 +326,9 @@
         levelDisplay.textContent = currentLevel;
         
         generateNextTile();
-        createColumnButtons();
         
         hideModal();
         draw();
-    }
-
-    /**
-     * Creates and adds the column drop buttons to the DOM.
-     */
-    function createColumnButtons() {
-        columnButtonsContainer.innerHTML = '';
-        for (let i = 0; i < GRID_SIZE; i++) {
-            const button = document.createElement('button');
-            button.className = 'column-btn';
-            button.textContent = `Drop in Col ${i + 1}`;
-            button.onclick = () => dropTile(i);
-            columnButtonsContainer.appendChild(button);
-        }
     }
 
     /**
@@ -408,7 +391,8 @@
         ctx.fill();
         
         ctx.fillStyle = elementData.textColor;
-        ctx.font = `bold ${FONT_SIZE * scale}px 'Inter'`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         
         // Handle dice emoji separately for better rendering
         if (element === '🎲') {
@@ -418,9 +402,6 @@
             ctx.font = `bold ${FONT_SIZE * scale}px 'Inter'`;
             ctx.fillText(element, scaledX + tileScaledSize / 2, scaledY + tileScaledSize / 2);
         }
-        
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
     }
     
     /**
@@ -445,7 +426,8 @@
         ctx.fill();
         
         ctx.fillStyle = elementData.textColor;
-        ctx.font = `bold ${FONT_SIZE * 0.7}px 'Inter'`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         
         // Handle dice emoji separately for better rendering
         if (nextTile === '🎲') {
@@ -455,9 +437,6 @@
             ctx.font = `bold ${FONT_SIZE * 0.7}px 'Inter'`;
             ctx.fillText(nextTile, x, y + 5 + previewSize / 2);
         }
-        
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
     }
 
     /**
@@ -482,6 +461,7 @@
      */
     function dropTile(col) {
         if (isGameOver || isAnimating) return;
+        if (col < 0 || col >= GRID_SIZE) return;
 
         let row = GRID_SIZE - 1;
         while (row >= 0 && grid[row][col] !== null) {
@@ -777,7 +757,7 @@
     function showRules() {
         const rulesHtml = `
             <p><strong>Goal:</strong> Form the target molecule on the grid by dropping atoms into the columns.</p>
-            <p><strong>How to Play:</strong> Click a 'Drop' button to release an atom into that column. Atoms fall to the lowest empty spot.</p>
+            <p><strong>How to Play:</strong> Click anywhere in a column to release an atom into that column. Atoms fall to the lowest empty spot.</p>
             <p><strong>Forming Molecules:</strong> When you connect the correct atoms for the target molecule, they will disappear. The remaining atoms will fall to fill the empty spaces.</p>
             <p><strong>Wildcard Tile:</strong> The purple '🎲' tile can act as any element to help you complete a molecule.</p>
             <p><strong>Game Over:</strong> The game ends if any column fills up completely to the top.</p>
@@ -810,6 +790,14 @@
     rulesButton.addEventListener('click', showRules);
     targetMoleculeDisplay.addEventListener('click', showFormula);
 
+    // Add click listener to the canvas for dropping tiles
+    canvas.addEventListener('click', (e) => {
+        if (isGameOver || isAnimating) return;
+        const x = e.offsetX;
+        const col = Math.floor((x - PADDING) / (TILE_SIZE + PADDING));
+        dropTile(col);
+    });
+
     // Responsive canvas resizing
     window.addEventListener('resize', () => {
         const containerWidth = document.querySelector('.game-container').offsetWidth;
@@ -822,3 +810,4 @@
 
 </body>
 </html>
+
